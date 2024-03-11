@@ -25,9 +25,9 @@ if env_id == 'HalfCheetah-v3':
 # begin of the most frequently changed config specified by the user
 # ==============================================================
 seed = 0
-n_episode = 128
-collector_env_num = 128
-evaluator_env_num = 128
+n_episode = 32
+collector_env_num = 32
+evaluator_env_num = 32
 continuous_action_space = True
 K = 20  # num_of_sampled_actions
 num_simulations = 50
@@ -44,7 +44,7 @@ policy_entropy_loss_weight = 0.005
 
 mujoco_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+    f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_with_adversary_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -101,12 +101,22 @@ mujoco_sampled_efficientzero_create_config = dict(
     policy=dict(
         type='sampled_efficientzero',
         import_names=['lzero.policy.sampled_efficientzero'],
+        learner=dict(
+            train_iterations=int(1e4),
+            dataloader=dict(num_workers=0, ),
+            log_policy=True,
+            hook=dict(
+                load_ckpt_before_run='',
+                log_show_after_iter=100,
+                save_ckpt_after_iter=10000,
+                save_ckpt_after_run=True,
+            ),
+        ),
     ),
 )
 mujoco_sampled_efficientzero_create_config = EasyDict(mujoco_sampled_efficientzero_create_config)
 create_config = mujoco_sampled_efficientzero_create_config
 
 if __name__ == "__main__":
-    from lzero.entry import train_muzero
-
-    train_muzero([main_config, create_config], seed=seed, max_env_step=max_env_step)
+    from lzero.entry import train_muzero_with_adversary
+    train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
