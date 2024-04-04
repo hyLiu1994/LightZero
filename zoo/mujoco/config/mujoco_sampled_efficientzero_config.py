@@ -25,16 +25,16 @@ if env_id == 'HalfCheetah-v3':
 # begin of the most frequently changed config specified by the user
 # ==============================================================
 seed = 0
-n_episode = 128
-collector_env_num = 128
-evaluator_env_num = 128
+collector_env_num = 8
+n_episode = 8
+evaluator_env_num = 3
 continuous_action_space = True
 K = 20  # num_of_sampled_actions
 num_simulations = 50
 update_per_collect = 200
-batch_size = 4096
+batch_size = 512
 
-max_env_step = int(5e6)
+max_env_step = int(5e7)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
 

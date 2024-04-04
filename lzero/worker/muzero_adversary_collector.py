@@ -3,7 +3,7 @@ from collections import deque, namedtuple
 from typing import Optional, Any, List
 
 import numpy as np
-import torch
+import torch, copy
 from ding.envs import BaseEnvManager
 from ding.torch_utils import to_ndarray
 from ding.utils import build_logger, EasyTimer, SERIAL_COLLECTOR_REGISTRY, get_rank, get_world_size, \
@@ -36,10 +36,12 @@ class MuZeroAdversaryCollector(ISerialCollector):
             collect_print_freq: int = 100,
             env: BaseEnvManager = None,
             policy: namedtuple = None,
+            policy_adversary: namedtuple = None,
             tb_logger: 'SummaryWriter' = None,  # noqa
             exp_name: Optional[str] = 'default_experiment',
             instance_name: Optional[str] = 'collector',
             policy_config: 'policy_config' = None,  # noqa
+            policy_adversary_config: 'policy_config' = None,  # noqa
     ) -> None:
         """
         Overview:
@@ -48,16 +50,19 @@ class MuZeroAdversaryCollector(ISerialCollector):
             - collect_print_freq (:obj:`int`): Frequency (in training steps) at which to print collection information.
             - env (:obj:`Optional[BaseEnvManager]`): Instance of the subclass of vectorized environment manager.
             - policy (:obj:`Optional[namedtuple]`): namedtuple of the collection mode policy API.
+            - policy_adversary (:obj:`Optional[namedtuple]`): namedtuple of the collection mode adversary policy API.
             - tb_logger (:obj:`Optional[SummaryWriter]`): TensorBoard logger instance.
             - exp_name (:obj:`str`): Name of the experiment, used for logging and saving purposes.
             - instance_name (:obj:`str`): Unique identifier for this collector instance.
             - policy_config (:obj:`Optional[policy_config]`): Configuration object for the policy.
+            - policy_adversary_config (:obj:`Optional[policy_adversary_config]`): Configuration object for the adversary policy.
         """
         self._exp_name = exp_name
         self._instance_name = instance_name
         self._collect_print_freq = collect_print_freq
         self._timer = EasyTimer()
         self._end_flag = False
+        self._epsilon = policy_adversary_config.Epsilon
 
         self._rank = get_rank()
         self._world_size = get_world_size()
@@ -80,8 +85,9 @@ class MuZeroAdversaryCollector(ISerialCollector):
             self._tb_logger = None
 
         self.policy_config = policy_config
+        self.policy_adversary_config = policy_adversary_config
 
-        self.reset(policy, env)
+        self.reset(policy, policy_adversary, env)
 
     def reset_env(self, _env: Optional[BaseEnvManager] = None) -> None:
         """
@@ -100,7 +106,7 @@ class MuZeroAdversaryCollector(ISerialCollector):
         else:
             self._env.reset()
 
-    def reset_policy(self, _policy: Optional[namedtuple] = None) -> None:
+    def reset_policy(self, _policy: Optional[namedtuple] = None, _policy_adversary: Optional[namedtuple] = None) -> None:
         """
         Overview:
             Reset or replace the policy used by this collector.
@@ -118,7 +124,11 @@ class MuZeroAdversaryCollector(ISerialCollector):
             )
         self._policy.reset()
 
-    def reset(self, _policy: Optional[namedtuple] = None, _env: Optional[BaseEnvManager] = None) -> None:
+        if _policy_adversary is not None:
+            self._policy_adversary = _policy_adversary
+        self._policy_adversary.reset()
+
+    def reset(self, _policy: Optional[namedtuple] = None, _policy_adversary: Optional[namedtuple] = None, _env: Optional[BaseEnvManager] = None) -> None:
         """
         Overview:
             Reset the collector with the given policy and/or environment.
@@ -134,8 +144,7 @@ class MuZeroAdversaryCollector(ISerialCollector):
         """
         if _env is not None:
             self.reset_env(_env)
-        if _policy is not None:
-            self.reset_policy(_policy)
+        self.reset_policy(_policy, _policy_adversary)
 
         self._env_info = {env_id: {'time': 0., 'step': 0} for env_id in range(self._env_num)}
 
@@ -471,9 +480,15 @@ class MuZeroAdversaryCollector(ISerialCollector):
                 # ==============================================================
                 # Adversary attack observation
                 # ==============================================================
-                for key in timesteps.keys():
-                    noise = np.random.normal(0, 0.001, len(timesteps[key].obs['observation']))
-                    timesteps[key].obs['observation'] = timesteps[key].obs['observation'] + noise
+                timesteps_copy = copy.deepcopy(timesteps)
+                for env_id in timesteps_copy.keys():
+                    timesteps_copy[env_id] = timesteps_copy[env_id].obs['observation']
+                    # noise = np.random.normal(0, 0.001, len(timesteps[key].obs['observation']))
+                noise = self._policy_adversary.forward(timesteps_copy)
+                for env_id in noise.keys():
+                    noise[env_id]['action'] = torch.clamp(noise[env_id]['action'], -1 * self._epsilon, self._epsilon)
+                    timesteps[env_id].obs['obvervation_true'] = timesteps[env_id].obs['observation']
+                    timesteps[env_id].obs['obvervation'] = timesteps[env_id].obs['observation'] + noise[env_id]['action'].numpy()
 
             interaction_duration = self._timer.value / len(timesteps)
 

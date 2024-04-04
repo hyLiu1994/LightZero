@@ -1,0 +1,1 @@
+tensorboard --logdir=/nfs/srv/data2/hengyu/LightZero/ --host=172.19.8.25 --port 6007

@@ -4,7 +4,6 @@ from functools import partial
 from typing import Optional, Tuple
 
 import torch
-from ding.config import compile_config
 from ding.envs import create_env_manager
 from ding.envs import get_vec_env_setting
 from ding.policy import create_policy
@@ -13,12 +12,18 @@ from ding.rl_utils import get_epsilon_greedy_fn
 from ding.worker import BaseLearner
 from tensorboardX import SummaryWriter
 
+from lzero.config.compile_config import compile_config
+from ding.worker import BaseLearner, InteractionSerialEvaluator, BaseSerialCommander, create_buffer, \
+    create_serial_collector
 from lzero.entry.utils import log_buffer_memory_usage
 from lzero.policy import visit_count_temperature
 from lzero.policy.random_policy import LightZeroRandomPolicy
 from lzero.worker import MuZeroAdversaryCollector as Collector
-from lzero.worker import MuZeroEvaluator as Evaluator
+from lzero.worker import MuZeroAdversaryEvaluator as Evaluator
+from lzero.worker import InteractionAdversarySerialEvaluator as EvaluatorAdversary
+from lzero.worker import AdversarySampleSerialCollector as CollectorAdversary
 from .utils import random_collect
+
 
 
 def train_muzero_with_adversary(
@@ -66,7 +71,9 @@ def train_muzero_with_adversary(
     else:
         cfg.policy.device = 'cpu'
 
-    cfg = compile_config(cfg, seed=seed, env=None, auto=True, create_cfg=create_cfg, save_cfg=True)
+    create_cfg.policy_adversary.type = create_cfg.policy_adversary.type + '_command'
+    policy_adversary_config = cfg.policy_adversary
+    cfg = compile_config(cfg, seed=seed, env=None, auto=True, create_cfg=create_cfg, save_cfg=True, have_adversary=True)
     # Create main components: env, policy
     env_fn, collector_env_cfg, evaluator_env_cfg = get_vec_env_setting(cfg.env)
 
@@ -78,6 +85,7 @@ def train_muzero_with_adversary(
     set_pkg_seed(cfg.seed, use_cuda=cfg.policy.cuda)
 
     policy = create_policy(cfg.policy, model=model, enable_field=['learn', 'collect', 'eval'])
+    policy_adversary = create_policy(cfg.policy_adversary, model=model, enable_field=['learn', 'collect', 'eval', 'command'])
 
     # load pretrained model
     if model_path is not None:
@@ -97,9 +105,11 @@ def train_muzero_with_adversary(
     collector = Collector(
         env=collector_env,
         policy=policy.collect_mode,
+        policy_adversary=policy_adversary.collect_mode,
         tb_logger=tb_logger,
         exp_name=cfg.exp_name,
-        policy_config=policy_config
+        policy_config=policy_config,
+        policy_adversary_config=policy_adversary_config
     )
     evaluator = Evaluator(
         eval_freq=cfg.policy.eval_freq,
@@ -107,9 +117,35 @@ def train_muzero_with_adversary(
         stop_value=cfg.env.stop_value,
         env=evaluator_env,
         policy=policy.eval_mode,
+        policy_adversary=policy_adversary.eval_mode,
         tb_logger=tb_logger,
         exp_name=cfg.exp_name,
-        policy_config=policy_config
+        policy_config=policy_config,
+        policy_adversary_config=policy_adversary_config
+    )
+ 
+    collector_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
+    evaluator_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
+    collector_adversary_env.seed(cfg.seed)
+    evaluator_adversary_env.seed(cfg.seed, dynamic_seed=False)
+    tb_logger_adversary = SummaryWriter(os.path.join('./{}/log/'.format(cfg.exp_name + "_adversary"), 'serial'))
+    learner_adversary = BaseLearner(cfg.policy_adversary.learn.learner, policy_adversary.learn_mode, tb_logger_adversary, exp_name=cfg.exp_name + "_adversary")
+    collector_adversary = CollectorAdversary(
+        cfg.policy_adversary.collect.collector,
+        env=collector_adversary_env,
+        policy=policy_adversary.collect_mode,
+        policy_agent=policy.eval_mode,
+        policy_config=policy_adversary_config,
+        policy_agent_config=policy_config,
+        tb_logger=tb_logger_adversary,
+        exp_name=cfg.exp_name + "_adversary"
+    )
+    evaluator_adversary = EvaluatorAdversary(
+        cfg.policy_adversary.eval.evaluator,
+        evaluator_adversary_env, policy_adversary.eval_mode, policy.eval_mode, policy_adversary_config, policy_config, tb_logger_adversary, exp_name=cfg.exp_name + "_adversary"
+    )
+    commander = BaseSerialCommander(
+        cfg.policy_adversary.other.commander, learner_adversary, collector_adversary, evaluator_adversary, None, policy_adversary.command_mode
     )
 
     # ==============================================================
@@ -117,6 +153,7 @@ def train_muzero_with_adversary(
     # ==============================================================
     # Learner's before_run hook.
     learner.call_hook('before_run')
+    learner_adversary.call_hook('before_run')
     
     if cfg.policy.update_per_collect is not None:
         update_per_collect = cfg.policy.update_per_collect
@@ -187,9 +224,24 @@ def train_muzero_with_adversary(
             if cfg.policy.use_priority:
                 replay_buffer.update_priority(train_data, log_vars[0]['value_priority_orig'])
 
+        # Collecting Data for Adversary.
+        collect_adversary_kwargs = commander.step()
+        # Evaluate policy performance
+        if evaluator_adversary.should_eval(learner_adversary.train_iter):
+            stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint, 
+                                                       learner_adversary.train_iter, collector_adversary.envstep)
+            if stop:
+                break
+        # Collect data by default config n_sample/n_episode
+        new_data = collector_adversary.collect(train_iter=learner_adversary.train_iter, policy_kwargs=collect_adversary_kwargs)
+
+        # Learn policy from collected data
+        learner_adversary.train(new_data, collector_adversary.envstep)
+
         if collector.envstep >= max_env_step or learner.train_iter >= max_train_iter:
             break
 
     # Learner's after_run hook.
     learner.call_hook('after_run')
+    learner_adversary.call_hook('after_run')
     return policy
