@@ -44,7 +44,7 @@ policy_entropy_loss_weight = 0.005
 
 mujoco_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+    f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_conv_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -61,7 +61,7 @@ mujoco_sampled_efficientzero_config = dict(
             action_space_size=action_space_size,
             continuous_action_space=continuous_action_space,
             num_of_sampled_actions=K,
-            model_type='mlp',
+            model_type='conv',
             lstm_hidden_size=256,
             latent_state_dim=256,
             self_supervised_learning_loss=True,
