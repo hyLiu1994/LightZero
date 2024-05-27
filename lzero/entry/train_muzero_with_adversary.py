@@ -9,17 +9,17 @@ from ding.envs import get_vec_env_setting
 from ding.policy import create_policy
 from ding.utils import set_pkg_seed, get_rank
 from ding.rl_utils import get_epsilon_greedy_fn
-from ding.worker import BaseLearner
 from tensorboardX import SummaryWriter
 
 from lzero.config.compile_config import compile_config
-from ding.worker import BaseLearner, InteractionSerialEvaluator, BaseSerialCommander, create_buffer, \
-    create_serial_collector
+from ding.worker import BaseLearner,  BaseSerialCommander
 from lzero.entry.utils import log_buffer_memory_usage
 from lzero.policy import visit_count_temperature
 from lzero.policy.random_policy import LightZeroRandomPolicy
 from lzero.worker import MuZeroAdversaryCollector as Collector
 from lzero.worker import MuZeroAdversaryEvaluator as Evaluator
+from lzero.worker import MuZeroAdversaryRandomCollector as RandomCollector
+from lzero.worker import MuZeroAdversaryRandomEvaluator as RandomEvaluator
 from lzero.worker import InteractionAdversarySerialEvaluator as EvaluatorAdversary
 from lzero.worker import AdversarySampleSerialCollector as CollectorAdversary
 from .utils import random_collect
@@ -73,19 +73,27 @@ def train_muzero_with_adversary(
 
     create_cfg.policy_adversary.type = create_cfg.policy_adversary.type + '_command'
     policy_adversary_config = cfg.policy_adversary
+    policy_adversary_random_config = cfg.policy_adversary_random
     cfg = compile_config(cfg, seed=seed, env=None, auto=True, create_cfg=create_cfg, save_cfg=True, have_adversary=True)
     # Create main components: env, policy
     env_fn, collector_env_cfg, evaluator_env_cfg = get_vec_env_setting(cfg.env)
 
     collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
     evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
-
     collector_env.seed(cfg.seed)
     evaluator_env.seed(cfg.seed, dynamic_seed=False)
     set_pkg_seed(cfg.seed, use_cuda=cfg.policy.cuda)
 
+    collector_random_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
+    evaluator_random_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
+    collector_random_env.seed(cfg.seed)
+    evaluator_random_env.seed(cfg.seed, dynamic_seed=False)
+
+
+
     policy = create_policy(cfg.policy, model=model, enable_field=['learn', 'collect', 'eval'])
     policy_adversary = create_policy(cfg.policy_adversary, model=model, enable_field=['learn', 'collect', 'eval', 'command'])
+    policy_adversary_random = create_policy(cfg.policy_adversary_random, model=model, enable_field=['collect', 'eval'])
 
     # load pretrained model
     if model_path is not None:
@@ -102,6 +110,7 @@ def train_muzero_with_adversary(
     batch_size = policy_config.batch_size
     # specific game buffer for MCTS+RL algorithms
     replay_buffer = GameBuffer(policy_config)
+    replay_buffer_random = GameBuffer(policy_config)
     collector = Collector(
         env=collector_env,
         policy=policy.collect_mode,
@@ -123,6 +132,28 @@ def train_muzero_with_adversary(
         policy_config=policy_config,
         policy_adversary_config=policy_adversary_config
     )
+
+    random_collector = RandomCollector(
+        env=collector_random_env,
+        policy=policy.collect_mode,
+        policy_adversary=policy_adversary_random.collect_mode,
+        tb_logger=tb_logger,
+        exp_name=cfg.exp_name + "_random",
+        policy_config=policy_config,
+        policy_adversary_config=policy_adversary_random_config
+    )
+    random_evaluator = RandomEvaluator(
+        eval_freq=cfg.policy.eval_freq,
+        n_evaluator_episode=cfg.env.n_evaluator_episode,
+        stop_value=cfg.env.stop_value,
+        env=evaluator_random_env,
+        policy=policy.eval_mode,
+        policy_adversary=policy_adversary_random.eval_mode,
+        tb_logger=tb_logger,
+        exp_name=cfg.exp_name + "_random",
+        policy_config=policy_config,
+        policy_adversary_config=policy_adversary_random_config
+    )
  
     collector_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
     evaluator_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
@@ -142,10 +173,21 @@ def train_muzero_with_adversary(
     )
     evaluator_adversary = EvaluatorAdversary(
         cfg.policy_adversary.eval.evaluator,
-        evaluator_adversary_env, policy_adversary.eval_mode, policy.eval_mode, policy_adversary_config, policy_config, tb_logger_adversary, exp_name=cfg.exp_name + "_adversary"
+        env = evaluator_adversary_env,
+        policy = policy_adversary.eval_mode,
+        policy_agent = policy.eval_mode,
+        policy_config = policy_adversary_config,
+        policy_agent_config = policy_config,
+        tb_logger = tb_logger_adversary,
+        exp_name=cfg.exp_name + "_adversary"
     )
     commander = BaseSerialCommander(
-        cfg.policy_adversary.other.commander, learner_adversary, collector_adversary, evaluator_adversary, None, policy_adversary.command_mode
+        cfg.policy_adversary.other.commander,
+        learner_adversary,
+        collector_adversary,
+        evaluator_adversary,
+        None,
+        policy_adversary.command_mode
     )
 
     # ==============================================================

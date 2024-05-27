@@ -15,8 +15,8 @@ from lzero.mcts.buffer.game_segment import GameSegment
 from lzero.mcts.utils import prepare_observation
 
 
-@SERIAL_COLLECTOR_REGISTRY.register('episode_muzero_adversary')
-class MuZeroAdversaryCollector(ISerialCollector):
+@SERIAL_COLLECTOR_REGISTRY.register('episode_muzero_adversary_random')
+class MuZeroAdversaryRandomCollector(ISerialCollector):
     """
     Overview:
         The Collector for MCTS+RL algorithms, including MuZero, EfficientZero, Sampled EfficientZero, Gumbel MuZero.
@@ -480,14 +480,11 @@ class MuZeroAdversaryCollector(ISerialCollector):
                 # ==============================================================
                 # Adversary attack observation
                 # ==============================================================
-                timesteps_copy = copy.deepcopy(timesteps)
-                for env_id in timesteps_copy.keys():
-                    timesteps_copy[env_id] = timesteps_copy[env_id].obs['observation']
-                noise = self._policy_adversary.forward(timesteps_copy)
-                for env_id in noise.keys():
-                    noise[env_id]['action'] = torch.clamp(noise[env_id]['action'], -1 * self._epsilon, self._epsilon)
+                for env_id in timesteps.keys():
+                    noise = np.random.normal(0, 0.001, len(timesteps[env_id].obs['observation']))
+                    noise = torch.clamp(noise, -1 * self._epsilon, self._epsilon)
                     timesteps[env_id].obs['observation_true'] = timesteps[env_id].obs['observation']
-                    timesteps[env_id].obs['observation'] = timesteps[env_id].obs['observation'] + noise[env_id]['action'].numpy()
+                    timesteps[env_id].obs['observation'] = timesteps[env_id].obs['observation'] + noise.numpy()
 
             interaction_duration = self._timer.value / len(timesteps)
 
