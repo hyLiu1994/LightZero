@@ -196,7 +196,8 @@ class MuZeroGameBuffer(GameBuffer):
             - pos_in_game_segment_list (:obj:`list`): list of transition index in game_segment
             - total_transitions (:obj:`int`): number of collected transitions
         Returns:
-            - reward_value_context (:obj:`list`): value_obs_list, value_mask, pos_in_game_segment_list, rewards_list, game_segment_lens,
+            - reward_value_context (:obj:`list`): value_obs_list, value_mask, pos_in_game_segment_list,
+            rewards_list, game_segment_lens,
               td_steps_list, action_mask_segment, to_play_segment
         """
         zero_obs = game_segment_list[0].zero_obs()

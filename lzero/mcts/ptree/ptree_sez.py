@@ -637,7 +637,7 @@ def compute_ucb_score(
     return ucb_score
 
 
-def batch_traverse(
+def  batch_traverse(
         roots: Any,
         pb_c_base: float,
         pb_c_init: float,

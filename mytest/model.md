@@ -1,0 +1,78 @@
+SampledEfficientZeroModelMLP(
+  (representation_network): RepresentationNetworkMLP(
+    (fc_representation): Sequential(
+      (0): Linear(in_features=11, out_features=256, bias=True)
+      (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Linear(in_features=256, out_features=256, bias=True)
+    )
+  )
+  (dynamics_network): DynamicsNetworkMLP(
+    (activation): ReLU(inplace=True)
+    (fc_dynamics_1): Sequential(
+      (0): Linear(in_features=259, out_features=256, bias=True)
+      (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Linear(in_features=256, out_features=256, bias=True)
+      (4): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (5): ReLU(inplace=True)
+    )
+    (fc_dynamics_2): Sequential(
+      (0): Linear(in_features=256, out_features=256, bias=True)
+      (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Linear(in_features=256, out_features=256, bias=True)
+      (4): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (5): ReLU(inplace=True)
+    )
+    (lstm): LSTM(256, 256)
+    (fc_reward_head): Sequential(
+      (0): Linear(in_features=256, out_features=32, bias=True)
+      (1): BatchNorm1d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Linear(in_features=32, out_features=601, bias=True)
+    )
+  )
+  (prediction_network): PredictionNetworkMLP(
+    (fc_prediction_common): Sequential(
+      (0): Linear(in_features=256, out_features=256, bias=True)
+      (1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Linear(in_features=256, out_features=256, bias=True)
+      (4): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (5): ReLU(inplace=True)
+    )
+    (fc_value_head): Sequential(
+      (0): Linear(in_features=256, out_features=32, bias=True)
+      (1): BatchNorm1d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Linear(in_features=32, out_features=601, bias=True)
+    )
+    (fc_policy_head): ReparameterizationHead(
+      (main): Sequential(
+        (0): Linear(in_features=256, out_features=256, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=256, out_features=256, bias=True)
+        (3): ReLU()
+      )
+      (mu): Linear(in_features=256, out_features=3, bias=True)
+      (log_sigma_layer): Linear(in_features=256, out_features=3, bias=True)
+    )
+  )
+  (projection): Sequential(
+    (0): Linear(in_features=256, out_features=1024, bias=True)
+    (1): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU(inplace=True)
+    (3): Linear(in_features=1024, out_features=1024, bias=True)
+    (4): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (5): ReLU(inplace=True)
+    (6): Linear(in_features=1024, out_features=1024, bias=True)
+    (7): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (prediction_head): Sequential(
+    (0): Linear(in_features=1024, out_features=512, bias=True)
+    (1): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU(inplace=True)
+    (3): Linear(in_features=512, out_features=1024, bias=True)
+  )
+)

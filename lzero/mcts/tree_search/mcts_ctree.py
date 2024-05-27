@@ -150,7 +150,7 @@ class EfficientZeroMCTSCtree(object):
                     roots, pb_c_base, pb_c_init, discount_factor, min_max_stats_lst, results,
                     copy.deepcopy(to_play_batch)
                 )
-                # obtain the search horizon for leaf nodes
+                # obtain the search horizon for leaf nodes # 如何定义这个搜索长度
                 search_lens = results.get_search_len()
 
                 # obtain the latent state for leaf node

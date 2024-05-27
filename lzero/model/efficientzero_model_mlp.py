@@ -172,7 +172,7 @@ class EfficientZeroModelMLP(nn.Module):
             - reward_hidden_state (:obj:`Tuple[torch.Tensor]`): The shape of each element is :math:`(1, B, lstm_hidden_size)`, where B is batch_size.
         """
         batch_size = obs.size(0)
-        latent_state = self._representation(obs)
+        latent_state = self._representation(obs) #[8, 4] -> [8, 128]
         policy_logits, value = self._prediction(latent_state)
         # zero initialization for reward hidden states
         # (hn, cn), each element shape is (layer_num=1, batch_size, lstm_hidden_size)

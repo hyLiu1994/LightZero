@@ -86,6 +86,7 @@ mujoco_sampled_efficientzero_config = dict(
         replay_buffer_size=int(1e6),
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
+        mcts_ctree=False
     ),
     policy_adversary=dict(
         cuda=True,

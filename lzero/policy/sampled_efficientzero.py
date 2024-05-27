@@ -867,7 +867,7 @@ class SampledEfficientZeroPolicy(MuZeroPolicy):
                 np.random.dirichlet([self._cfg.root_dirichlet_alpha] * int(self._cfg.model.num_of_sampled_actions)
                                     ).astype(np.float32).tolist() for j in range(active_collect_env_num)
             ]
-
+           # 扩展一个节点
             roots.prepare(self._cfg.root_noise_weight, noises, value_prefix_roots, policy_logits, to_play)
             self._mcts_collect.search(
                 roots, self._collect_model, latent_state_roots, reward_hidden_state_roots, to_play

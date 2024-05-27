@@ -35,9 +35,10 @@ cartpole_efficientzero_config = dict(
             lstm_hidden_size=128,
             latent_state_dim=128,
             discrete_action_encoding_type='one_hot',
-            norm_type='BN', 
+            norm_type='BN',
         ),
         cuda=True,
+        mcts_ctree=False,
         env_type='not_board_games',
         game_segment_length=50,
         update_per_collect=update_per_collect,
@@ -52,6 +53,7 @@ cartpole_efficientzero_config = dict(
         replay_buffer_size=int(1e6),  # the size/capacity of replay_buffer, in the terms of transitions.
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
+
     ),
 )
 
