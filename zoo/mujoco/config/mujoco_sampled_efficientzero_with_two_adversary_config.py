@@ -86,7 +86,8 @@ mujoco_sampled_efficientzero_config = dict(
         replay_buffer_size=int(1e6),
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
-        mcts_ctree=False
+        mcts_ctree=False,
+        nosize_policy = 'normal'
     ),
     policy_adversary=dict(
         cuda=True,
@@ -177,8 +178,7 @@ mujoco_sampled_efficientzero_create_config = EasyDict(mujoco_sampled_efficientze
 create_config = mujoco_sampled_efficientzero_create_config
 
 if __name__ == "__main__":
-    from lzero.entry.train_muzero_with_ppo_adversary import train_muzero_with_adversary
-    train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
     from lzero.entry import train_muzero_with_adversary
-    from lzero.entry.train_muzero_with_random_adversary import train_muzero_with_adversary
     train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
+
+

@@ -12,12 +12,14 @@ from ding.rl_utils import get_epsilon_greedy_fn
 from tensorboardX import SummaryWriter
 
 from lzero.config.compile_config import compile_config
-from ding.worker import BaseLearner
+from ding.worker import BaseLearner,  BaseSerialCommander
 from lzero.entry.utils import log_buffer_memory_usage
 from lzero.policy import visit_count_temperature
 from lzero.policy.random_policy import LightZeroRandomPolicy
 from lzero.worker import MuZeroAdversaryCollector as Collector
 from lzero.worker import MuZeroAdversaryEvaluator as Evaluator
+from lzero.worker import InteractionAdversarySerialEvaluator as EvaluatorAdversary
+from lzero.worker import AdversarySampleSerialCollector as CollectorAdversary
 from .utils import random_collect
 
 
@@ -69,6 +71,8 @@ def train_muzero_with_adversary(
     else:
         cfg.policy.device = 'cpu'
 
+    create_cfg.policy_adversary.type = create_cfg.policy_adversary.type + '_command'
+    policy_adversary_config = cfg.policy_adversary
     policy_random_adversary_config = cfg.policy_random_adversary
 
     cfg = compile_config(cfg, seed=seed, env=None, auto=True, create_cfg=create_cfg, save_cfg=True, have_adversary=True)
@@ -79,9 +83,21 @@ def train_muzero_with_adversary(
     evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
     collector_env.seed(cfg.seed)
     evaluator_env.seed(cfg.seed, dynamic_seed=False)
+
+    random_collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
+    random_evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
+    random_collector_env.seed(cfg.seed)
+    random_evaluator_env.seed(cfg.seed, dynamic_seed=False)
+
+    collector_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
+    evaluator_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
+    collector_adversary_env.seed(cfg.seed)
+    evaluator_adversary_env.seed(cfg.seed, dynamic_seed=False)
+
     set_pkg_seed(cfg.seed, use_cuda=cfg.policy.cuda)
 
     policy = create_policy(cfg.policy, model=model, enable_field=['learn', 'collect', 'eval'])
+    policy_adversary = create_policy(cfg.policy_adversary, model=model, enable_field=['learn', 'collect', 'eval', 'command'])
     # policy_random_adversary = create_policy(cfg.policy_random_adversary, model=model, enable_field=['collect', 'eval'])
 
     # load pretrained model
@@ -92,6 +108,10 @@ def train_muzero_with_adversary(
     tb_logger = SummaryWriter(os.path.join('./{}/log/'.format(cfg.exp_name), 'serial')) if get_rank() == 0 else None
     learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, exp_name=cfg.exp_name)
 
+    tb_logger_adversary = SummaryWriter(os.path.join('./{}/log/'.format(cfg.exp_name + "_adversary"), 'serial'))
+    learner_adversary = BaseLearner(cfg.policy_adversary.learn.learner, policy_adversary.learn_mode,
+                                    tb_logger_adversary, exp_name=cfg.exp_name + "_adversary")
+
     # ==============================================================
     # MCTS+RL algorithms related core code
     # ==============================================================
@@ -99,9 +119,30 @@ def train_muzero_with_adversary(
     batch_size = policy_config.batch_size
     # specific game buffer for MCTS+RL algorithms
     replay_buffer = GameBuffer(policy_config)
-
+    replay_random_buffer = GameBuffer(policy_config)
     collector = Collector(
         env=collector_env,
+        policy=policy.collect_mode,
+        policy_adversary=policy_adversary.collect_mode,
+        tb_logger=tb_logger,
+        exp_name=cfg.exp_name,
+        policy_config=policy_config,
+        policy_adversary_config=policy_adversary_config
+    )
+    evaluator = Evaluator(
+        eval_freq=cfg.policy.eval_freq,
+        n_evaluator_episode=cfg.env.n_evaluator_episode,
+        stop_value=cfg.env.stop_value,
+        env=evaluator_env,
+        policy=policy.eval_mode,
+        policy_adversary=policy_adversary.eval_mode,
+        tb_logger=tb_logger,
+        exp_name=cfg.exp_name,
+        policy_config=policy_config,
+        policy_adversary_config=policy_adversary_config
+    )
+    random_collector = Collector(
+        env=random_collector_env,
         policy=policy.collect_mode,
         policy_adversary=None,
         tb_logger=tb_logger,
@@ -109,11 +150,11 @@ def train_muzero_with_adversary(
         policy_config=policy_config,
         policy_adversary_config=policy_random_adversary_config
     )
-    evaluator = Evaluator(
+    random_evaluator = Evaluator(
         eval_freq=cfg.policy.eval_freq,
         n_evaluator_episode=cfg.env.n_evaluator_episode,
         stop_value=cfg.env.stop_value,
-        env=evaluator_env,
+        env=random_evaluator_env,
         policy=policy.eval_mode,
         policy_adversary=None,
         tb_logger=tb_logger,
@@ -122,11 +163,41 @@ def train_muzero_with_adversary(
         policy_adversary_config=policy_random_adversary_config
     )
 
+    collector_adversary = CollectorAdversary(
+        cfg.policy_adversary.collect.collector,
+        env=collector_adversary_env,
+        policy=policy_adversary.collect_mode,
+        policy_agent=policy.eval_mode,
+        policy_config=policy_adversary_config,
+        policy_agent_config=policy_config,
+        tb_logger=tb_logger_adversary,
+        exp_name=cfg.exp_name + "_adversary"
+    )
+    evaluator_adversary = EvaluatorAdversary(
+        cfg.policy_adversary.eval.evaluator,
+        env = evaluator_adversary_env,
+        policy = policy_adversary.eval_mode,
+        policy_agent = policy.eval_mode,
+        policy_config = policy_adversary_config,
+        policy_agent_config = policy_config,
+        tb_logger = tb_logger_adversary,
+        exp_name=cfg.exp_name + "_adversary"
+    )
+    commander = BaseSerialCommander(
+        cfg.policy_adversary.other.commander,
+        learner_adversary,
+        collector_adversary,
+        evaluator_adversary,
+        None,
+        policy_adversary.command_mode
+    )
+
     # ==============================================================
     # Main loop
     # ==============================================================
     # Learner's before_run hook.
     learner.call_hook('before_run')
+    learner_adversary.call_hook('before_run')
     
     if cfg.policy.update_per_collect is not None:
         update_per_collect = cfg.policy.update_per_collect
@@ -139,6 +210,8 @@ def train_muzero_with_adversary(
 
     while True:
         log_buffer_memory_usage(learner.train_iter, replay_buffer, tb_logger)
+        # 打印日志是否有误.
+        log_buffer_memory_usage(learner.train_iter, replay_random_buffer, tb_logger)
         collect_kwargs = {}
         # set temperature for visit count distributions according to the train_iter,
         # please refer to Appendix D in MuZero paper for details.
@@ -167,6 +240,7 @@ def train_muzero_with_adversary(
                 break
 
         # Collect data by default config n_sample/n_episode.
+        new_random_data = random_collector.collect(train_iter=learner.train_iter, policy_kwargs=collect_kwargs)
         new_data = collector.collect(train_iter=learner.train_iter, policy_kwargs=collect_kwargs)
         if cfg.policy.update_per_collect is None:
             # update_per_collect is None, then update_per_collect is set to the number of collected transitions multiplied by the model_update_ratio.
@@ -177,6 +251,8 @@ def train_muzero_with_adversary(
         # remove the oldest data if the replay buffer is full.
         replay_buffer.remove_oldest_data_to_fit()
 
+        replay_random_buffer.push_game_segments(new_random_data)
+        replay_random_buffer.remove_oldest_data_to_fit()
         # Learn policy from collected data.
         for i in range(update_per_collect):
             # Learner will train ``update_per_collect`` times in one iteration.
@@ -191,16 +267,54 @@ def train_muzero_with_adversary(
                 )
                 break
 
+            if replay_random_buffer.get_num_of_transitions() > batch_size:
+                train_random_data = replay_random_buffer.sample(batch_size, policy)
+            else:
+                logging.warning(
+                    f'The data in replay_random_buffer is not sufficient to sample a mini-batch: '
+                    f'batch_size: {batch_size}, '
+                    f'{replay_random_buffer} '
+                    f'continue to collect now ....'
+                )
+                break
+
             # The core train steps for MCTS+RL algorithms.
             log_vars = learner.train(train_data, collector.envstep)
 
             if cfg.policy.use_priority:
                 replay_buffer.update_priority(train_data, log_vars[0]['value_priority_orig'])
+                replay_random_buffer.update_priority(train_random_data, log_vars[0]['value_priority_orig'])
 
+        # Collecting Data for Adversary.
+        collect_adversary_kwargs = commander.step()
+        # Evaluate policy performance
+        if evaluator_adversary.should_eval(learner_adversary.train_iter):
+            stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint, 
+                                                       learner_adversary.train_iter, collector_adversary.envstep)
+            if stop:
+                break
+
+        if evaluator_adversary.should_eval(learner_adversary.train_iter):
+            stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint,
+                                                       learner_adversary.train_iter, collector_adversary.envstep)
+            if stop:
+                break
+
+        if evaluator_adversary.should_eval(learner_adversary.train_iter):
+            stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint,
+                                                       learner_adversary.train_iter, collector_adversary.envstep)
+            if stop:
+                break
+        # Collect data by default config n_sample/n_episode
+        new_data = collector_adversary.collect(train_iter=learner_adversary.train_iter, policy_kwargs=collect_adversary_kwargs)
+
+        # Learn policy from collected data
+        learner_adversary.train(new_data, collector_adversary.envstep)
 
         if collector.envstep >= max_env_step or learner.train_iter >= max_train_iter:
             break
 
     # Learner's after_run hook.
     learner.call_hook('after_run')
+    learner_adversary.call_hook('after_run')
     return policy
