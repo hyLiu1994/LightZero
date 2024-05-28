@@ -24,7 +24,7 @@ from .utils import random_collect
 
 
 
-def train_muzero_with_adversary(
+def train_muzero_with_two_adversary(
         input_cfg: Tuple[dict, dict],
         seed: int = 0,
         model: Optional[torch.nn.Module] = None,
