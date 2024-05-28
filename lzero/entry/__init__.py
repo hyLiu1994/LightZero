@@ -2,7 +2,7 @@ from .train_alphazero import train_alphazero
 from .eval_alphazero import eval_alphazero
 from .train_muzero import train_muzero
 from .train_muzero_with_adversary import train_muzero_with_adversary
-from .train_muzero_with_two_adversary import train_muzero_two_with_adversary
+from .train_muzero_with_two_adversary import train_muzero_with_two_adversary
 from .train_muzero_with_reward_model import train_muzero_with_reward_model
 from .eval_muzero import eval_muzero
 from .eval_muzero_with_gym_env import eval_muzero_with_gym_env
