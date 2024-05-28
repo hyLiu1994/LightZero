@@ -114,11 +114,10 @@ def train_muzero_with_adversary(
 
     # Create worker components: learner, collector, evaluator, replay buffer, commander.
     tb_logger = SummaryWriter(os.path.join('./{}/log/'.format(cfg.exp_name), 'serial')) if get_rank() == 0 else None
-    learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, exp_name=cfg.exp_name)
+    learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, instance_name='muzero_learner', exp_name=cfg.exp_name)
 
-    tb_logger_adversary = SummaryWriter(os.path.join('./{}/log/'.format(cfg.exp_name + "_adversary"), 'serial'))
     learner_adversary = BaseLearner(cfg.policy_adversary.learn.learner, policy_adversary.learn_mode,
-                                    tb_logger_adversary, exp_name=cfg.exp_name + "_adversary")
+                                    tb_logger, instance_name='adversary_learner', exp_name=cfg.exp_name)
 
     # ==============================================================
     # MCTS+RL algorithms related core code
@@ -203,8 +202,8 @@ def train_muzero_with_adversary(
         policy_agent=policy.eval_mode,
         policy_config=policy_adversary_config,
         policy_agent_config=policy_config,
-        tb_logger=tb_logger_adversary,
-        exp_name=cfg.exp_name
+        tb_logger=tb_logger,
+        exp_name=cfg.exp_name,
         instance_name='adversary_collector',
     )
     evaluator_adversary = EvaluatorAdversary(
@@ -214,7 +213,7 @@ def train_muzero_with_adversary(
         policy_agent = policy.eval_mode,
         policy_config = policy_adversary_config,
         policy_agent_config = policy_config,
-        tb_logger = tb_logger_adversary,
+        tb_logger = tb_logger,
         exp_name=cfg.exp_name,
         instance_name='adversary_evaluator',
     )
