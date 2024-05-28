@@ -146,7 +146,7 @@ def train_muzero_with_adversary(
         policy_config=policy_config
     )
     if cfg.policy.noise_policy == 'ppo':
-        ppo_collector = Collector(
+        collector = Collector(
             env=ppo_collector_env,
             policy=policy.collect_mode,
             policy_adversary=policy_adversary.collect_mode,
@@ -169,7 +169,7 @@ def train_muzero_with_adversary(
         policy_adversary_config=policy_adversary_config
     )
     if cfg.policy.noise_policy=='random':
-        random_collector = Collector(
+        collector = Collector(
            env=random_collector_env,
            policy=policy.collect_mode,
            policy_adversary=None,
@@ -263,27 +263,22 @@ def train_muzero_with_adversary(
 
         # Evaluate policy performance.
         if evaluator.should_eval(learner.train_iter):
-            stop, reward = evaluator.eval(learner.save_checkpoint, learner.train_iter, collector.envstep)
+            stop, _ = evaluator.eval(learner.save_checkpoint, learner.train_iter, collector.envstep)
             if stop:
                 break
 
         if ppo_evaluator.should_eval(learner.train_iter):
-            stop, reward = ppo_evaluator.eval(learner.save_checkpoint, learner.train_iter, collector.envstep)
+            stop, _ = ppo_evaluator.eval(learner.save_checkpoint, learner.train_iter, collector.envstep)
             if stop:
                 break
 
         if random_evaluator.should_eval(learner.train_iter):
-            stop, reward = random_evaluator.eval(learner.save_checkpoint, learner.train_iter, collector.envstep)
+            stop, _ = random_evaluator.eval(learner.save_checkpoint, learner.train_iter, collector.envstep)
             if stop:
                 break
 
         # Collect data by default config n_sample/n_episode.
-        if cfg.policy.noise_policy == 'normal':
-            new_data = collector.collect(train_iter=learner.train_iter, policy_kwargs=collect_kwargs)
-        if cfg.policy.noise_policy == 'ppo':
-            new_data = ppo_collector.collect(train_iter=learner.train_iter, policy_kwargs=collect_kwargs)
-        if cfg.policy.noise_policy == 'random':
-            new_data = random_collector.collect(train_iter=learner.train_iter, policy_kwargs=collect_kwargs)
+        new_data = collector.collect(train_iter=learner.train_iter, policy_kwargs=collect_kwargs)
 
         if cfg.policy.update_per_collect is None:
             # update_per_collect is None, then update_per_collect is set to the number of collected transitions multiplied by the model_update_ratio.
@@ -325,7 +320,6 @@ def train_muzero_with_adversary(
 
         # Collect data by default config n_sample/n_episode
         new_data = collector_adversary.collect(train_iter=learner_adversary.train_iter, policy_kwargs=collect_adversary_kwargs)
-
         # Learn policy from collected data
         learner_adversary.train(new_data, collector_adversary.envstep)
 
