@@ -87,7 +87,7 @@ f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_without_adversary_ns{num_si
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
         mcts_ctree=False,
-        nosize_policy = 'normal'
+        noise_policy = 'normal'
     ),
     policy_adversary=dict(
         cuda=True,

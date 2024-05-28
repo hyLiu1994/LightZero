@@ -87,7 +87,7 @@ mujoco_sampled_efficientzero_config = dict(
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
         mcts_ctree=False,
-        nosize_policy = 'ppo'
+        noise_policy = 'ppo'
     ),
     policy_adversary=dict(
         cuda=True,
