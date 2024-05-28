@@ -177,5 +177,8 @@ mujoco_sampled_efficientzero_create_config = EasyDict(mujoco_sampled_efficientze
 create_config = mujoco_sampled_efficientzero_create_config
 
 if __name__ == "__main__":
+    from lzero.entry.train_muzero_with_ppo_adversary import train_muzero_with_adversary
+    train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
     from lzero.entry import train_muzero_with_adversary
+    from lzero.entry.train_muzero_with_random_adversary import train_muzero_with_adversary
     train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)

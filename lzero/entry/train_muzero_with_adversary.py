@@ -292,6 +292,18 @@ def train_muzero_with_adversary(
                                                        learner_adversary.train_iter, collector_adversary.envstep)
             if stop:
                 break
+
+        if evaluator_adversary.should_eval(learner_adversary.train_iter):
+            stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint,
+                                                       learner_adversary.train_iter, collector_adversary.envstep)
+            if stop:
+                break
+
+        if evaluator_adversary.should_eval(learner_adversary.train_iter):
+            stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint,
+                                                       learner_adversary.train_iter, collector_adversary.envstep)
+            if stop:
+                break
         # Collect data by default config n_sample/n_episode
         new_data = collector_adversary.collect(train_iter=learner_adversary.train_iter, policy_kwargs=collect_adversary_kwargs)
 
