@@ -62,7 +62,10 @@ class MuZeroAdversaryCollector(ISerialCollector):
         self._collect_print_freq = collect_print_freq
         self._timer = EasyTimer()
         self._end_flag = False
-        self._epsilon = policy_adversary_config.Epsilon
+        self.policy_config = policy_config
+        if policy_adversary_config is not None:
+            self._epsilon = policy_adversary_config.Epsilon
+            self._noise_policy = policy_adversary_config.noise_policy
 
         self._rank = get_rank()
         self._world_size = get_world_size()
@@ -83,9 +86,6 @@ class MuZeroAdversaryCollector(ISerialCollector):
                 path='./{}/log/{}'.format(self._exp_name, self._instance_name), name=self._instance_name, need_tb=False
             )
             self._tb_logger = None
-
-        self.policy_config = policy_config
-        self.policy_adversary_config = policy_adversary_config
 
         self.reset(policy, policy_adversary, env)
 
@@ -126,7 +126,7 @@ class MuZeroAdversaryCollector(ISerialCollector):
 
         if _policy_adversary is not None:
             self._policy_adversary = _policy_adversary
-        self._policy_adversary.reset()
+            self._policy_adversary.reset()
 
     def reset(self, _policy: Optional[namedtuple] = None, _policy_adversary: Optional[namedtuple] = None, _env: Optional[BaseEnvManager] = None) -> None:
         """
@@ -257,6 +257,7 @@ class MuZeroAdversaryCollector(ISerialCollector):
         # [<frame_stack_num> : <frame_stack_num>+<num_unroll_steps>] obs as the pad obs
         # e.g. the start 4 obs is init zero obs, the num_unroll_steps is 5, so we take the [4:9] obs as the pad obs
         pad_obs_lst = game_segments[i].obs_segment[beg_index:end_index]
+        pad_obs_true_lst = game_segments[i].obs_true_segment[beg_index:end_index]
         pad_child_visits_lst = game_segments[i].child_visit_segment[:self.policy_config.num_unroll_steps]
         # EfficientZero original repo bug:
         # pad_child_visits_lst = game_segments[i].child_visit_segment[beg_index:end_index]
@@ -310,8 +311,7 @@ class MuZeroAdversaryCollector(ISerialCollector):
 
         return None
 
-    def collect(self,
-                n_episode: Optional[int] = None,
+    def collect(self, n_episode: Optional[int] = None,
                 train_iter: int = 0,
                 policy_kwargs: Optional[dict] = None) -> List[Any]:
         """
@@ -480,14 +480,22 @@ class MuZeroAdversaryCollector(ISerialCollector):
                 # ==============================================================
                 # Adversary attack observation
                 # ==============================================================
-                timesteps_copy = copy.deepcopy(timesteps)
-                for env_id in timesteps_copy.keys():
-                    timesteps_copy[env_id] = timesteps_copy[env_id].obs['observation']
-                noise = self._policy_adversary.forward(timesteps_copy)
-                for env_id in noise.keys():
-                    noise[env_id]['action'] = torch.clamp(noise[env_id]['action'], -1 * self._epsilon, self._epsilon)
-                    timesteps[env_id].obs['observation_true'] = timesteps[env_id].obs['observation']
-                    timesteps[env_id].obs['observation'] = timesteps[env_id].obs['observation'] + noise[env_id]['action'].numpy()
+                if hasattr(self, '_noise_policy'):
+                    if self._noise_policy == 'ppo':
+                        timesteps_copy = copy.deepcopy(timesteps)
+                        for env_id in timesteps_copy.keys():
+                            timesteps_copy[env_id] = timesteps_copy[env_id].obs['observation']
+                        noise = self._policy_adversary.forward(timesteps_copy)
+                        for env_id in noise.keys():
+                            noise[env_id]['action'] = torch.clamp(noise[env_id]['action'], -1 * self._epsilon, self._epsilon)
+                            timesteps[env_id].obs['observation_true'] = timesteps[env_id].obs['observation']
+                            timesteps[env_id].obs['observation'] = timesteps[env_id].obs['observation'] + noise[env_id]['action'].numpy()
+                    elif self._noise_policy == 'random':
+                        for env_id in timesteps.keys():
+                            noise = np.random.normal(0, 0.001, len(timesteps[env_id].obs['observation']))
+                            noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon)
+                            timesteps[env_id].obs['observation_true'] = timesteps[env_id].obs['observation']
+                            timesteps[env_id].obs['observation'] = timesteps[env_id].obs['observation'] + noise.numpy()
 
             interaction_duration = self._timer.value / len(timesteps)
 
@@ -716,6 +724,8 @@ class MuZeroAdversaryCollector(ISerialCollector):
 
         # log
         self._output_log(train_iter)
+        # init_obs = self._env.ready_obs
+        # print(init_obs)
         return return_data
 
     def _output_log(self, train_iter: int) -> None:

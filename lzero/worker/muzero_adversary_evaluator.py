@@ -101,7 +101,9 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
         # MCTS+RL related core code
         # ==============================================================
         self.policy_config = policy_config
-        self.policy_adversary_config = policy_adversary_config
+        if policy_adversary_config is not None:
+            self._epsilon = policy_adversary_config.Epsilon
+            self._noise_policy = policy_adversary_config.noise_policy
 
     def reset_env(self, _env: Optional[BaseEnvManager] = None) -> None:
         """
@@ -133,7 +135,7 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
             self._policy = _policy
         if _policy_adversary is not None:
             self._policy_adversary = _policy_adversary
-        self._policy_adversary.reset()
+            self._policy_adversary.reset()
         self._policy.reset()
 
     def reset(self, _policy: Optional[namedtuple] = None, _policy_adversary: Optional[namedtuple] = None, _env: Optional[BaseEnvManager] = None) -> None:
@@ -325,11 +327,29 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                     # ==============================================================
                     timesteps = self._env.step(actions)
                     timesteps = to_tensor(timesteps, dtype=torch.float32)
-                    
                     # TODO
                     # ==============================================================
                     # Adding Noise for observation by utilizing PPO Adversary.
                     # ==============================================================
+                    if hasattr(self, '_noise_policy'):
+                        if self._noise_policy == 'ppo':
+                            timesteps_copy = copy.deepcopy(timesteps)
+                            for env_id in timesteps_copy.keys():
+                                timesteps_copy[env_id] = timesteps_copy[env_id].obs['observation']
+                            noise = self._policy_adversary.forward(timesteps_copy)
+                            for env_id in noise.keys():
+                                noise[env_id]['action'] = torch.clamp(noise[env_id]['action'], -1 * self._epsilon,
+                                                                      self._epsilon)
+                                timesteps[env_id].obs['observation_true'] = timesteps[env_id].obs['observation']
+                                timesteps[env_id].obs['observation'] = timesteps[env_id].obs['observation'] + \
+                                                                       noise[env_id]['action'].numpy()
+                        elif self._noise_policy == 'random':
+                            for env_id in timesteps.keys():
+                                noise = np.random.normal(0, 0.001, len(timesteps[env_id].obs['observation']))
+                                noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon)
+                                timesteps[env_id].obs['observation_true'] = timesteps[env_id].obs['observation']
+                                timesteps[env_id].obs['observation'] = timesteps[env_id].obs[
+                                                                           'observation'] + noise.numpy()
 
                     for env_id, t in timesteps.items():
                         obs, reward, done, info = t.obs, t.reward, t.done, t.info

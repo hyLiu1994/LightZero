@@ -93,6 +93,7 @@ mujoco_sampled_efficientzero_config = dict(
         recompute_adv=True,
         Epsilon = 0.0075,
         action_space='continuous',
+        noise_policy = 'ppo',
         model=dict(
             obs_shape=observation_shape,
             action_shape=observation_shape,
@@ -124,24 +125,26 @@ mujoco_sampled_efficientzero_config = dict(
         ),
         eval=dict(evaluator=dict(eval_freq=500, )),
     ),
-    policy_adversary_random=dict(
+    policy_random_adversary=dict(
         cuda=True,
-        recompute_adv=True,
+        # recompute_adv=True,
+        # action_space='continuous',
         Epsilon=0.0075,
-        action_space='continuous',
-        model=dict(
-            obs_shape=observation_shape,
-            action_shape=observation_shape,
-            action_space='continuous',
-        ),
-        collect=dict(
-            n_sample=3200,
-            unroll_len=1,
-            discount_factor=0.99,
-            gae_lambda=0.95,
-        ),
-        eval=dict(evaluator=dict(eval_freq=500, )),
+        noise_policy='random',
+        # model=dict(
+        #     obs_shape=observation_shape,
+        #     action_shape=observation_shape,
+        #     action_space='continuous',
+        # ),
+        # collect=dict(
+        #     n_sample=3200,
+        #     unroll_len=1,
+        #     discount_factor=0.99,
+        #     gae_lambda=0.95,
+        # ),
+        # eval=dict(evaluator=dict(eval_freq=500, )),
     ),
+
 )
 
 mujoco_sampled_efficientzero_config = EasyDict(mujoco_sampled_efficientzero_config)
@@ -154,8 +157,8 @@ mujoco_sampled_efficientzero_create_config = dict(
     ),
     env_manager=dict(type='subprocess'),
     policy=dict(
-        type='sampled_efficientzero',
-        import_names=['lzero.policy.sampled_efficientzero'],
+        type='sampled_adversary_efficientzero',
+        import_names=['lzero.policy.sampled_adversary_efficientzero'],
         learner=dict(
             train_iterations=int(1e4),
             dataloader=dict(num_workers=0, ),
@@ -169,7 +172,6 @@ mujoco_sampled_efficientzero_create_config = dict(
         ),
     ),
     policy_adversary=dict(type='ppo'),
-    policy_adversary_random=dict(type='random'),
 )
 mujoco_sampled_efficientzero_create_config = EasyDict(mujoco_sampled_efficientzero_create_config)
 create_config = mujoco_sampled_efficientzero_create_config
