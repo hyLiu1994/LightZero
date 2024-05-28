@@ -133,7 +133,8 @@ def train_muzero_with_adversary(
             policy=policy.collect_mode,
             tb_logger=tb_logger,
             exp_name=cfg.exp_name,
-            policy_config=policy_config
+            policy_config=policy_config,
+            instance_name="muzero_collector"
         )
     evaluator = Evaluator(
         eval_freq=cfg.policy.eval_freq,
@@ -143,7 +144,8 @@ def train_muzero_with_adversary(
         policy=policy.eval_mode,
         tb_logger=tb_logger,
         exp_name=cfg.exp_name,
-        policy_config=policy_config
+        policy_config=policy_config,
+        instance_name="muzero_evaluator"
     )
     if cfg.policy.noise_policy == 'ppo':
         collector = Collector(
@@ -151,9 +153,10 @@ def train_muzero_with_adversary(
             policy=policy.collect_mode,
             policy_adversary=policy_adversary.collect_mode,
             tb_logger=tb_logger,
-            exp_name=cfg.exp_name + "_ppo",
+            exp_name=cfg.exp_name,
             policy_config=policy_config,
-            policy_adversary_config=policy_adversary_config
+            policy_adversary_config=policy_adversary_config,
+            instance_name="muzero_collector_with_ppo"
         )
     ppo_evaluator = Evaluator(
         eval_freq=cfg.policy.eval_freq,
@@ -163,8 +166,8 @@ def train_muzero_with_adversary(
         policy=policy.eval_mode,
         policy_adversary=policy_adversary.eval_mode,
         tb_logger=tb_logger,
-        exp_name=cfg.exp_name + "_ppo" ,
-        instance_name = 'ppo_evaluator',
+        exp_name=cfg.exp_name,
+        instance_name = 'muzero_evaluator_with_ppo',
         policy_config=policy_config,
         policy_adversary_config=policy_adversary_config
     )
@@ -174,9 +177,10 @@ def train_muzero_with_adversary(
            policy=policy.collect_mode,
            policy_adversary=None,
            tb_logger=tb_logger,
-           exp_name=cfg.exp_name + "_random",
+           exp_name=cfg.exp_name,
            policy_config=policy_config,
-           policy_adversary_config=policy_random_adversary_config
+           policy_adversary_config=policy_random_adversary_config,
+           instance_name="muzero_collector_with_random"
         )
     random_evaluator = Evaluator(
         eval_freq=cfg.policy.eval_freq,
@@ -186,8 +190,8 @@ def train_muzero_with_adversary(
         policy=policy.eval_mode,
         policy_adversary=None,
         tb_logger=tb_logger,
-        exp_name=cfg.exp_name + "_random",
-        instance_name='random_evaluator',
+        exp_name=cfg.exp_name,
+        instance_name='muzero_evaluator_with_random',
         policy_config=policy_config,
         policy_adversary_config=policy_random_adversary_config
     )
@@ -200,7 +204,8 @@ def train_muzero_with_adversary(
         policy_config=policy_adversary_config,
         policy_agent_config=policy_config,
         tb_logger=tb_logger_adversary,
-        exp_name=cfg.exp_name + "_adversary"
+        exp_name=cfg.exp_name
+        instance_name='adversary_collector',
     )
     evaluator_adversary = EvaluatorAdversary(
         cfg.policy_adversary.eval.evaluator,
@@ -210,8 +215,8 @@ def train_muzero_with_adversary(
         policy_config = policy_adversary_config,
         policy_agent_config = policy_config,
         tb_logger = tb_logger_adversary,
-        exp_name=cfg.exp_name + "_adversary",
-        instance_name='evaluator_adversary',
+        exp_name=cfg.exp_name,
+        instance_name='adversary_evaluator',
     )
     commander = BaseSerialCommander(
         cfg.policy_adversary.other.commander,
