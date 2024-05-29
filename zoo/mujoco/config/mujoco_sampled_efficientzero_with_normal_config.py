@@ -33,6 +33,7 @@ K = 20  # num_of_sampled_actions
 num_simulations = 50
 update_per_collect = 200
 batch_size = 256
+eval_freq = 50
 
 max_env_step = int(5e6)
 reanalyze_ratio = 0.
@@ -82,7 +83,7 @@ f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_without_adversary_ns{num_si
         num_simulations=num_simulations,
         reanalyze_ratio=reanalyze_ratio,
         n_episode=n_episode,
-        eval_freq=int(2e3),
+        eval_freq=int(eval_freq),
         replay_buffer_size=int(1e6),
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
@@ -124,7 +125,7 @@ f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_without_adversary_ns{num_si
             discount_factor=0.99,
             gae_lambda=0.95,
         ),
-        eval=dict(evaluator=dict(eval_freq=500, )),
+        eval=dict(evaluator=dict(eval_freq=eval_freq, )),
     ),
     policy_random_adversary=dict(
         cuda=True,
