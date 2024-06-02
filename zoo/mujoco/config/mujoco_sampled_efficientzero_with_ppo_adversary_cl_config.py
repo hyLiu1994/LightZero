@@ -1,5 +1,6 @@
 from easydict import EasyDict
-
+import os
+# os.environ['LD_LIBRARY_PATH'] = '/root/.mujoco/mujoco210/bin'
 # options={'Hopper-v3', 'HalfCheetah-v3', 'Walker2d-v3', 'Ant-v3', 'Humanoid-v3'}
 env_id = 'Hopper-v3'
 
@@ -44,7 +45,7 @@ policy_entropy_loss_weight = 0.005
 
 mujoco_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_with_adversary_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}_AdversaryPPO',
+    f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_with_ppo_adversary_cl_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -68,6 +69,7 @@ mujoco_sampled_efficientzero_config = dict(
             self_supervised_adversary_learning_loss=True,
             res_connection_in_dynamics=True,
         ),
+        # ssl_adversary_loss_weight
         cuda=True,
         policy_entropy_loss_weight=policy_entropy_loss_weight,
         ignore_done=ignore_done,
@@ -88,13 +90,14 @@ mujoco_sampled_efficientzero_config = dict(
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
         mcts_ctree=False,
+        noise_policy = 'ppo'
     ),
     policy_adversary=dict(
         cuda=True,
         recompute_adv=True,
-        Epsilon = 0.0075,
+        Epsilon=0.0075,
         action_space='continuous',
-        noise_policy = 'ppo',
+        noise_policy='ppo',
         model=dict(
             obs_shape=observation_shape,
             action_shape=observation_shape,
@@ -158,8 +161,8 @@ mujoco_sampled_efficientzero_create_config = dict(
     ),
     env_manager=dict(type='subprocess'),
     policy=dict(
-        type='sampled_two_adversary_efficientzero',
-        import_names=['lzero.policy.sampled_two_adversary_efficientzero'],
+        type='sampled_adversary_efficientzero',
+        import_names=['lzero.policy.sampled_adversary_efficientzero'],
         learner=dict(
             train_iterations=int(1e4),
             dataloader=dict(num_workers=0, ),
@@ -178,7 +181,7 @@ mujoco_sampled_efficientzero_create_config = EasyDict(mujoco_sampled_efficientze
 create_config = mujoco_sampled_efficientzero_create_config
 
 if __name__ == "__main__":
-    from lzero.entry import train_muzero_with_two_adversary
-    train_muzero_with_two_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
+    from lzero.entry import train_muzero_with_adversary
+    train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
 
 

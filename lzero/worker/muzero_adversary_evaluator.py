@@ -12,7 +12,7 @@ from ding.utils import get_world_size, get_rank, broadcast_object_list
 from ding.worker.collector.base_serial_evaluator import ISerialEvaluator, VectorEvalMonitor
 from easydict import EasyDict
 
-from lzero.mcts.buffer.game_segment import GameSegment
+from lzero.mcts.buffer.adversary_game_segment import AdversaryGameSegment as GameSegment
 from lzero.mcts.utils import prepare_observation
 
 
@@ -263,6 +263,30 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                     [to_ndarray(init_obs[i]['observation']) for _ in range(self.policy_config.model.frame_stack_num)]
                 )
 
+                # ============================================
+                # first add Adverse
+                # ====================================================
+                if hasattr(self, '_noise_policy'):
+                    if self._noise_policy == 'ppo':
+                        stack_obs = {env_id: init_obs[env_id]['observation'] for env_id in range(env_nums)}
+                        noise = self._policy_adversary.forward(stack_obs)
+                        for env_id in noise.keys():
+                            noise[env_id]['action'] = torch.clamp(noise[env_id]['action'], -1 * self._epsilon,
+                                                                  self._epsilon)
+                            game_segments[env_id].reset([to_ndarray(init_obs[i]['observation'] + noise[env_id]['action'].tolist())
+                                                         for _ in range(self.policy_config.model.frame_stack_num)],
+                                                        [to_ndarray(init_obs[i]['observation']) for _ in
+                                                         range(self.policy_config.model.frame_stack_num)])
+                    elif self._noise_policy == 'random':
+                        for env_id in range(env_nums):
+                            noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
+                            noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon)
+                            game_segments[env_id].reset(
+                                [to_ndarray(init_obs[i]['observation'] + noise.numpy())
+                                 for _ in range(self.policy_config.model.frame_stack_num)],
+                                [to_ndarray(init_obs[i]['observation']) for _ in
+                                 range(self.policy_config.model.frame_stack_num)])
+
             ready_env_id = set()
             remain_episode = n_episode
 
@@ -356,7 +380,7 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
 
                         game_segments[env_id].append(
                             actions[env_id], to_ndarray(obs['observation']), reward, action_mask_dict[env_id],
-                            to_play_dict[env_id]
+                            to_play_dict[env_id], true_obs = to_ndarray(obs['observation_true'])
                         )
 
                         # NOTE: in evaluator, we only need save the ``o_{t+1} = obs['observation']``
@@ -425,6 +449,30 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                                         for _ in range(self.policy_config.model.frame_stack_num)
                                     ]
                                 )
+
+                                if hasattr(self, '_noise_policy'):
+                                    if self._noise_policy == 'ppo':
+                                        stack_obs = {env_id: init_obs[env_id]['observation'] for env_id in
+                                                     range(env_nums)}
+                                        noise = self._policy_adversary.forward(stack_obs)
+                                        for env_id in noise.keys():
+                                            noise[env_id]['action'] = torch.clamp(noise[env_id]['action'],
+                                                                                  -1 * self._epsilon,
+                                                                                  self._epsilon)
+                                            game_segments[env_id].reset(
+                                                [to_ndarray(init_obs[i]['observation'] + noise[env_id]['action'].tolist())
+                                                 for _ in range(self.policy_config.model.frame_stack_num)],
+                                                [to_ndarray(init_obs[i]['observation']) for _ in
+                                                 range(self.policy_config.model.frame_stack_num)])
+                                    elif self._noise_policy == 'random':
+                                        for env_id in range(env_nums):
+                                            noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
+                                            noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon)
+                                            game_segments[env_id].reset(
+                                                [to_ndarray(init_obs[i]['observation'] + noise.numpy())
+                                                 for _ in range(self.policy_config.model.frame_stack_num)],
+                                                [to_ndarray(init_obs[i]['observation']) for _ in
+                                                 range(self.policy_config.model.frame_stack_num)])
 
                             # Env reset is done by env_manager automatically.
                             self._policy.reset([env_id])

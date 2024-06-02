@@ -268,13 +268,17 @@ class AdversarySampleSerialCollector(ISerialCollector):
                 self._obs_pool.update(stack_obs)
                 if self._transform_obs:
                     stack_obs = to_tensor(stack_obs, dtype=torch.float32)
-                if self._policy_cfg.type == 'dreamer_command' and not random_collect:
+                if self._policy_cfg.type == 'dreamer_command' and not random_collect: # ppo_command
                     policy_output = self._policy.forward(stack_obs, **policy_kwargs, reset=self._resets, state=self._states)
                     #self._states = {env_id: output['state'] for env_id, output in policy_output.items()}
                     self._states = [output['state'] for output in policy_output.values()]
                 else:
                     policy_output = self._policy.forward(stack_obs, **policy_kwargs)
+                    # if len(policy_output) < 8:
+                    #     print(policy_output)
+                    #     print("stack_obs", stack_obs)
                 self._policy_output_pool.update(policy_output)
+
                 # Add noise for obs
                 noises_action = {env_id: output['action'] for env_id, output in policy_output.items()}
                 noises_action = to_ndarray(noises_action)
@@ -313,12 +317,23 @@ class AdversarySampleSerialCollector(ISerialCollector):
                         transition = self._policy.process_transition(
                             self._obs_pool[env_id], self._policy_output_pool[env_id], timestep, env_id
                         )
-                    else:
-                        transition = self._policy.process_transition(
-                            self._obs_pool[env_id], self._policy_output_pool[env_id], timestep
-                        )
-                        if level_seeds is not None:
-                            transition['seed'] = level_seeds[env_id]
+                    else:  #ppo_command
+                        try:
+                            transition = self._policy.process_transition(
+                                self._obs_pool[env_id], self._policy_output_pool[env_id], timestep
+                            )
+                            if level_seeds is not None:
+                                transition['seed'] = level_seeds[env_id]
+                        # 比如：1 / 0
+                        except Exception as e:
+                            print("policy_agent_output", policy_agent_output)
+                            print("timestep", timestep)
+                            # 捕获异常并打印信息
+                            print("An exception occurred: env_id _obs_pool _policy_output_pool, policy_output",
+                                  e, env_id, self._obs_pool, self._policy_output_pool, policy_output)
+                            # 再次抛出异常
+                            raise
+
                     # ``train_iter`` passed in from ``serial_entry``, indicates current collecting model's iteration.
                     transition['collect_iter'] = train_iter
                     self._traj_buffer[env_id].append(transition)

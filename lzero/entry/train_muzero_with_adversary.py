@@ -50,8 +50,10 @@ def train_muzero_with_adversary(
     """
 
     cfg, create_cfg = input_cfg
-    assert create_cfg.policy.type in ['efficientzero', 'muzero', 'sampled_efficientzero', 'gumbel_muzero', 'stochastic_muzero', 'sampled_adversary_efficientzero'], \
-        "train_muzero entry now only support the following algo.: 'efficientzero', 'muzero', 'sampled_efficientzero', 'gumbel_muzero'"
+    assert create_cfg.policy.type in ['efficientzero', 'muzero',  'gumbel_muzero', 'stochastic_muzero',
+                                      'sampled_efficientzero', 'sampled_adversary_efficientzero',
+                                      'sampled_two_adversary_efficientzero'], \
+        "train_muzero entry now only support the following algo.: 'efficientzero', 'muzero', 'gumbel_muzero', 'sampled_efficientzero', 'sampled_adversary_efficientzero', 'sampled_two_adversary_efficientzero' "
 
     if create_cfg.policy.type == 'muzero':
         from lzero.mcts import MuZeroGameBuffer as GameBuffer
@@ -60,14 +62,16 @@ def train_muzero_with_adversary(
     elif create_cfg.policy.type == 'sampled_efficientzero':
         from lzero.mcts import SampledEfficientZeroGameBuffer as GameBuffer
     elif create_cfg.policy.type == 'sampled_adversary_efficientzero':
-        from lzero.mcts import SampledEfficientZeroGameBuffer as GameBuffer
+        from lzero.mcts import AdversarySampledEfficientZeroGameBuffer as GameBuffer
+    elif create_cfg.policy.type == 'sampled_two_adversary_efficientzero':
+        from lzero.mcts import AdversarySampledEfficientZeroGameBuffer as GameBuffer
     elif create_cfg.policy.type == 'gumbel_muzero':
         from lzero.mcts import GumbelMuZeroGameBuffer as GameBuffer
     elif create_cfg.policy.type == 'stochastic_muzero':
         from lzero.mcts import StochasticMuZeroGameBuffer as GameBuffer
 
     if cfg.policy.cuda and torch.cuda.is_available():
-        cfg.policy.device = 'cuda'
+        cfg.policy.device = 'cuda:0'
     else:
         cfg.policy.device = 'cpu'
 
@@ -239,8 +243,8 @@ def train_muzero_with_adversary(
     # The purpose of collecting random data before training:
     # Exploration: Collecting random data helps the agent explore the environment and avoid getting stuck in a suboptimal policy prematurely.
     # Comparison: By observing the agent's performance during random action-taking, we can establish a baseline to evaluate the effectiveness of reinforcement learning algorithms.
-    if cfg.policy.random_collect_episode_num > 0:
-        random_collect(cfg.policy, policy, LightZeroRandomPolicy, collector, collector_env, replay_buffer)
+    # if cfg.policy.random_collect_episode_num > 0:
+    #     random_collect(cfg.policy, policy, LightZeroRandomPolicy, collector, collector_env, replay_buffer)
 
     while True:
         log_buffer_memory_usage(learner.train_iter, replay_buffer, tb_logger)
@@ -317,13 +321,14 @@ def train_muzero_with_adversary(
         collect_adversary_kwargs = commander.step()
         # Evaluate policy performance
         if evaluator_adversary.should_eval(learner_adversary.train_iter):
-            stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint,
+            stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint, 
                                                        learner_adversary.train_iter, collector_adversary.envstep)
             if stop:
                 break
 
         # Collect data by default config n_sample/n_episode
         new_data = collector_adversary.collect(train_iter=learner_adversary.train_iter, policy_kwargs=collect_adversary_kwargs)
+
         # Learn policy from collected data
         learner_adversary.train(new_data, collector_adversary.envstep)
 

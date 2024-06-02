@@ -8,6 +8,7 @@ from ding.model import model_wrap
 from ding.torch_utils import to_tensor
 from ding.utils import POLICY_REGISTRY
 from ditk import logging
+from torch.autograd import Variable
 from torch.distributions import Categorical, Independent, Normal
 from torch.nn import L1Loss
 
@@ -20,8 +21,8 @@ from lzero.policy import scalar_transform, InverseScalarTransform, cross_entropy
 from lzero.policy.muzero import MuZeroPolicy
 
 
-@POLICY_REGISTRY.register('sampled_adversary_efficientzero')
-class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
+@POLICY_REGISTRY.register('sampled_two_adversary_efficientzero')
+class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
     """
     Overview:
         The policy class for Sampled EfficientZero proposed in the paper https://arxiv.org/abs/2104.06303.
@@ -241,6 +242,8 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
         Overview:
             Learn mode init method. Called by ``self.__init__``. Initialize the learn model, optimizer and MCTS utils.
         """
+        self.x = Variable(torch.rand(1), requires_grad=True).to(self._cfg.device)
+        self.y = Variable(torch.rand(1), requires_grad=True).to(self._cfg.device)
         assert self._cfg.optim_type in ['SGD', 'Adam', 'AdamW'], self._cfg.optim_type
         if self._cfg.model.continuous_action_space:
             # Weight Init for the last output layer of gaussian policy head in prediction network.
@@ -305,7 +308,8 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
             self._cfg.model.support_scale, self._cfg.device, self._cfg.model.categorical_distribution
         )
 
-    def _forward_learn(self, data: torch.Tensor) -> Dict[str, Union[float, int]]:
+
+    def _forward_learn_before(self, data: torch.Tensor) -> Dict[str, Union[float, int]]:
         """
          Overview:
              The forward function for learning policy in learn mode, which is the core of the learning process.
@@ -318,9 +322,6 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
              - info_dict (:obj:`Dict[str, Union[float, int]]`): The information dict to be logged, which contains \
                  current learning loss and learning statistics.
          """
-        self._learn_model.train()
-        self._target_model.train()
-
         current_batch, target_batch = data
         # ==============================================================
         # sampled related core code
@@ -461,6 +462,9 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
                     obs = to_tensor(obs_batch)
                     true_obs = to_tensor(true_obs_batch)
 
+                    obs = to_tensor(obs)
+                    true_obs = to_tensor(true_obs)
+
                     # NOTE: no grad for the representation_state branch.
                     obs_proj = self._learn_model.project(obs, with_grad=True)
                     true_obs_proj = self._learn_model.project(true_obs, with_grad=True)
@@ -528,29 +532,12 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
         )
         weighted_total_loss = (weights * loss).mean()
 
-        gradient_scale = 1 / self._cfg.num_unroll_steps
-        weighted_total_loss.register_hook(lambda grad: grad * gradient_scale)
-        self._optimizer.zero_grad()
-        weighted_total_loss.backward()
-        if self._cfg.multi_gpu:
-            self.sync_gradients(self._learn_model)
-        total_grad_norm_before_clip = torch.nn.utils.clip_grad_norm_(
-            self._learn_model.parameters(), self._cfg.grad_clip_value
-        )
-        self._optimizer.step()
-        if self._cfg.cos_lr_scheduler or self._cfg.lr_piecewise_constant_decay:
-            self.lr_scheduler.step()
-
-        # ==============================================================
-        # the core target model update step.
-        # ==============================================================
-        self._target_model.update(self._learn_model.state_dict())
-
         if self._cfg.monitor_extra_statistics:
             predicted_value_prefixs = torch.stack(predicted_value_prefixs).transpose(1, 0).squeeze(-1)
             predicted_value_prefixs = predicted_value_prefixs.reshape(-1).unsqueeze(-1)
 
         return_data = {
+            'loss': loss,
             'cur_lr': self._optimizer.param_groups[0]['lr'],
             'collect_mcts_temperature': self._collect_mcts_temperature,
             'weighted_total_loss': weighted_total_loss.item(),
@@ -590,7 +577,6 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
                 'target_sampled_actions_max': target_sampled_actions[:, :, 0].max().item(),
                 'target_sampled_actions_min': target_sampled_actions[:, :, 0].min().item(),
                 'target_sampled_actions_mean': target_sampled_actions[:, :, 0].mean().item(),
-                'total_grad_norm_before_clip': total_grad_norm_before_clip.item()
             })
         else:
             return_data.update({
@@ -601,6 +587,101 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
                 'target_sampled_actions_max': target_sampled_actions[:, :].float().max().item(),
                 'target_sampled_actions_min': target_sampled_actions[:, :].float().min().item(),
                 'target_sampled_actions_mean': target_sampled_actions[:, :].float().mean().item(),
+            })
+
+        return return_data
+
+
+    def _forward_learn(self, data: Tuple[torch.Tensor]) -> Dict[str, Union[float, int]]:
+        """
+         Overview:
+             The forward function for learning policy in learn mode, which is the core of the learning process.
+             The data is sampled from replay buffer.
+             The loss is calculated by the loss function and the loss is backpropagated to update the model.
+         Arguments:
+             - data (:obj:`Tuple[torch.Tensor]`): The data sampled from replay buffer, which is a tuple of tensors.
+                 The first tensor is the current_batch, the second tensor is the target_batch.
+         Returns:
+             - info_dict (:obj:`Dict[str, Union[float, int]]`): The information dict to be logged, which contains \
+                 current learning loss and learning statistics.
+         """
+        self._learn_model.train()
+        self._target_model.train()
+
+        return_data_ppo = self._forward_learn_before(data[0])
+        return_data_random = self._forward_learn_before(data[1])
+        weighted_total_loss = self.x * return_data_ppo['weighted_total_loss'] + self.y * return_data_random['weighted_total_loss']
+        loss = self.x * return_data_ppo['loss'] + self.y * return_data_random['loss']
+
+        gradient_scale = 1 / self._cfg.num_unroll_steps
+        weighted_total_loss.register_hook(lambda grad: grad * gradient_scale)
+        self._optimizer.zero_grad()
+        weighted_total_loss.backward()
+        if self._cfg.multi_gpu:
+            self.sync_gradients(self._learn_model)
+        total_grad_norm_before_clip = torch.nn.utils.clip_grad_norm_(
+            self._learn_model.parameters(), self._cfg.grad_clip_value
+        )
+        self._optimizer.step()
+        if self._cfg.cos_lr_scheduler or self._cfg.lr_piecewise_constant_decay:
+            self.lr_scheduler.step()
+
+        # ==============================================================
+        # the core target model update step.
+        # ==============================================================
+        self._target_model.update(self._learn_model.state_dict())
+
+        return_data = {
+            'cur_lr': self._optimizer.param_groups[0]['lr'],
+            'collect_mcts_temperature': self._collect_mcts_temperature,
+            'weighted_total_loss': weighted_total_loss.item(),
+            'total_loss': loss.mean().item(),
+            'policy_loss': (return_data_ppo['policy_loss'] + return_data_random['policy_loss']) / 2.,
+            'policy_entropy': (return_data_ppo['policy_entropy'] + return_data_random['policy_entropy']) / 2.,
+            'target_policy_entropy': (return_data_ppo['target_policy_entropy'] + return_data_random['target_policy_entropy']) / 2.,
+            'value_prefix_loss': (return_data_ppo['value_prefix_loss'] + return_data_random['value_prefix_loss']) / 2.,
+            'value_loss': (return_data_ppo['value_loss'] + return_data_random['value_loss']) / 2.,
+            'consistency_loss': (return_data_ppo['consistency_loss'] + return_data_random['consistency_loss']) / 2.,
+
+            # ==============================================================
+            # priority related
+            # ==============================================================
+            'value_priority': (return_data_ppo['value_priority'] + return_data_random['value_priority']) / 2.,
+            'value_priority_orig': (return_data_ppo['value_priority_orig'] + return_data_random['value_priority_orig']) / 2.,
+            'target_value_prefix': (return_data_ppo['target_value_prefix'] + return_data_random['target_value_prefix']) / 2.,
+            'target_value': (return_data_ppo['target_value'] + return_data_random['target_value']) / 2.,
+            'transformed_target_value_prefix': (return_data_ppo['transformed_target_value_prefix'] + return_data_random['transformed_target_value_prefix']) / 2.,
+            'transformed_target_value': (return_data_ppo['transformed_target_value'] + return_data_random['transformed_target_value']) / 2.,
+            'predicted_value_prefixs': (return_data_ppo['predicted_value_prefixs'] + return_data_random['predicted_value_prefixs']) / 2.,
+            'predicted_values': (return_data_ppo['predicted_values'] + return_data_random['predicted_values']) / 2.
+        }
+
+        if self._cfg.model.continuous_action_space:
+            return_data.update({
+                # ==============================================================
+                # sampled related core code
+                # ==============================================================
+                'policy_mu_max': (return_data_ppo['policy_mu_max'] + return_data_random['policy_mu_max']) / 2.,
+                'policy_mu_min': (return_data_ppo['policy_mu_min'] + return_data_random['policy_mu_min']) / 2.,
+                'policy_mu_mean': (return_data_ppo['policy_mu_mean'] + return_data_random['policy_mu_mean']) / 2.,
+                'policy_sigma_max': (return_data_ppo['policy_sigma_max'] + return_data_random['policy_sigma_max']) / 2.,
+                'policy_sigma_min': (return_data_ppo['policy_sigma_min'] + return_data_random['policy_sigma_min']) / 2.,
+                'policy_sigma_mean': (return_data_ppo['policy_sigma_mean'] + return_data_random['policy_sigma_mean']) / 2.,
+                # take the fist dim in action space
+                'target_sampled_actions_max': (return_data_ppo['target_sampled_actions_max'] + return_data_random['target_sampled_actions_max']) / 2.,
+                'target_sampled_actions_min': (return_data_ppo['target_sampled_actions_min'] + return_data_random['target_sampled_actions_min']) / 2.,
+                'target_sampled_actions_mean': (return_data_ppo['target_sampled_actions_mean'] + return_data_random['target_sampled_actions_mean']) / 2.,
+                'total_grad_norm_before_clip': total_grad_norm_before_clip.item()
+            })
+        else:
+            return_data.update({
+                # ==============================================================
+                # sampled related core code
+                # ==============================================================
+                # take the fist dim in action space
+                'target_sampled_actions_max': (return_data_ppo['target_sampled_actions_max'] + return_data_random['target_sampled_actions_max']) / 2.,
+                'target_sampled_actions_min': (return_data_ppo['target_sampled_actions_min'] + return_data_random['target_sampled_actions_min']) / 2.,
+                'target_sampled_actions_mean': (return_data_ppo['target_sampled_actions_mean'] + return_data_random['target_sampled_actions_mean']) / 2.,
                 'total_grad_norm_before_clip': total_grad_norm_before_clip.item()
             })
 
