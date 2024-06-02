@@ -380,7 +380,7 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
 
                         game_segments[env_id].append(
                             actions[env_id], to_ndarray(obs['observation']), reward, action_mask_dict[env_id],
-                            to_play_dict[env_id], true_obs = to_ndarray(obs['observation_true'])
+                            to_play_dict[env_id],  true_obs=to_ndarray(obs['observation_true']) if hasattr(self, '_noise_policy') else None
                         )
 
                         # NOTE: in evaluator, we only need save the ``o_{t+1} = obs['observation']``
