@@ -463,7 +463,7 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
 
                     # NOTE: no grad for the representation_state branch.
                     obs_proj = self._learn_model.project(obs, with_grad=True)
-                    true_obs_proj = self._learn_model.project(true_obs, with_grad=True)
+                    true_obs_proj = self._learn_model.project(true_obs, with_grad=False)
                     temp_loss = negative_cosine_similarity(obs_proj, true_obs_proj) * mask_batch[:, step_k]
 
                     consistency_loss += temp_loss
