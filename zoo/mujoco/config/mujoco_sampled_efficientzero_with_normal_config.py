@@ -102,9 +102,9 @@ f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_without_adversary_ns{num_si
             action_space='continuous',
         ),
         learn=dict(
-            epoch_per_collect=10,
+            epoch_per_collect=1,
             update_per_collect=1,
-            batch_size=320,
+            batch_size=32,
             learning_rate=3e-4,
             value_weight=0.5,
             entropy_weight=0.001,
@@ -120,7 +120,7 @@ f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_without_adversary_ns{num_si
             grad_clip_value=0.5,
         ),
         collect=dict(
-            n_sample=3200,
+            n_sample=32,
             unroll_len=1,
             discount_factor=0.99,
             gae_lambda=0.95,

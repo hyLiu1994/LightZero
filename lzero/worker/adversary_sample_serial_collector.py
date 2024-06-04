@@ -342,7 +342,7 @@ class AdversarySampleSerialCollector(ISerialCollector):
                     self._env_info[env_id]['step'] += 1
                     collected_step += 1
                     # prepare data
-                    if timestep.done or len(self._traj_buffer[env_id]) == self._traj_len:
+                    if timestep.done or len(self._traj_buffer[env_id]) == self._traj_len or len(self._traj_buffer[env_id]) + collected_sample > n_sample:
                         # If policy is r2d2:
                         # 1. For each collect_env, we want to collect data of length self._traj_len=INF
                         # unless the episode enters the 'done' state.
