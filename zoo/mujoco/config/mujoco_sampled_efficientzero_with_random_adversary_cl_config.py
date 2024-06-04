@@ -1,5 +1,6 @@
 from easydict import EasyDict
-
+import os
+# os.environ['LD_LIBRARY_PATH'] = '/root/.mujoco/mujoco210/bin'
 # options={'Hopper-v3', 'HalfCheetah-v3', 'Walker2d-v3', 'Ant-v3', 'Humanoid-v3'}
 env_id = 'Hopper-v3'
 
@@ -38,14 +39,13 @@ max_env_step = int(5e6)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
 eval_freq = 50
-
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
 mujoco_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_with_ppo_adversary_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+    f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_with_random_adversary_cl_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -64,10 +64,12 @@ mujoco_sampled_efficientzero_config = dict(
             num_of_sampled_actions=K,
             model_type='mlp',
             lstm_hidden_size=256,
-            latent_state_dim=256,
+            latent_state_dim=11,
             self_supervised_learning_loss=True,
+            self_supervised_adversary_learning_loss=True,
             res_connection_in_dynamics=True,
         ),
+        # ssl_adversary_loss_weight
         cuda=True,
         policy_entropy_loss_weight=policy_entropy_loss_weight,
         ignore_done=ignore_done,
@@ -83,12 +85,12 @@ mujoco_sampled_efficientzero_config = dict(
         num_simulations=num_simulations,
         reanalyze_ratio=reanalyze_ratio,
         n_episode=n_episode,
-        eval_freq=int(eval_freq),
+        eval_freq=eval_freq,
         replay_buffer_size=int(1e6),
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
         mcts_ctree=False,
-        noise_policy = 'ppo'
+        noise_policy = 'random'
     ),
     policy_adversary=dict(
         cuda=True,
@@ -159,8 +161,8 @@ mujoco_sampled_efficientzero_create_config = dict(
     ),
     env_manager=dict(type='subprocess'),
     policy=dict(
-        type='sampled_efficientzero',
-        import_names=['lzero.policy.sampled_efficientzero'],
+        type='sampled_adversary_efficientzero',
+        import_names=['lzero.policy.sampled_adversary_efficientzero'],
         learner=dict(
             train_iterations=int(1e4),
             dataloader=dict(num_workers=0, ),

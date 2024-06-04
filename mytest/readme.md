@@ -22,4 +22,6 @@ pip uninstall cython
 pip install cython==0.29.21 
 5. No such file or directory: 'patchelf' on mujoco-py [installation](https://github.com/openai/mujoco-py/issues/652)
 6. AttributeError: 'MujocoEnv' object has no attribute '[_observation_space](https://github.com/opendilab/DI-engine/issues/473)'
-
+7. AttributeError: module 'mujoco_py' has no attribute ['utils'](https://github.com/openai/mujoco-py/issues/464)
+8. 安装mujoco_py遇到的一些[问题与解决方法](https://blog.csdn.net/weixin_44420419/article/details/116231500)
+9. [api_key ](https://www.roboti.us/license.html)

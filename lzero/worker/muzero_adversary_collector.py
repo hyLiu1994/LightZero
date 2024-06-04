@@ -11,7 +11,7 @@ from ding.utils import build_logger, EasyTimer, SERIAL_COLLECTOR_REGISTRY, get_r
 from ding.worker.collector.base_serial_collector import ISerialCollector
 from torch.nn import L1Loss
 
-from lzero.mcts.buffer.game_segment import GameSegment
+from lzero.mcts.buffer.adversary_game_segment import AdversaryGameSegment as GameSegment
 from lzero.mcts.utils import prepare_observation
 
 
@@ -281,13 +281,13 @@ class MuZeroAdversaryCollector(ISerialCollector):
         # pad over and save
         if self.policy_config.gumbel_algo:
             last_game_segments[i].pad_over(pad_obs_lst, pad_reward_lst, pad_root_values_lst, pad_child_visits_lst,
-                                           next_segment_improved_policy=pad_improved_policy_prob)
+                                           next_segment_improved_policy=pad_improved_policy_prob, next_segment_true_observations=pad_obs_true_lst)
         else:
             if self.policy_config.use_ture_chance_label_in_chance_encoder:
                 last_game_segments[i].pad_over(pad_obs_lst, pad_reward_lst, pad_root_values_lst, pad_child_visits_lst,
-                                               next_chances=chance_lst)
+                                               next_chances=chance_lst, next_segment_true_observations=pad_obs_true_lst)
             else:
-                last_game_segments[i].pad_over(pad_obs_lst, pad_reward_lst, pad_root_values_lst, pad_child_visits_lst)
+                last_game_segments[i].pad_over(pad_obs_lst, pad_reward_lst, pad_root_values_lst, pad_child_visits_lst, next_segment_true_observations=pad_obs_true_lst)
         """
         Note:
             game_segment element shape:
@@ -369,13 +369,55 @@ class MuZeroAdversaryCollector(ISerialCollector):
         ]
         # stacked observation windows in reset stage for init game_segments
         observation_window_stack = [[] for _ in range(env_nums)]
+        true_observation_window_stack = [[] for _ in range(env_nums)]
         for env_id in range(env_nums):
             observation_window_stack[env_id] = deque(
                 [to_ndarray(init_obs[env_id]['observation']) for _ in range(self.policy_config.model.frame_stack_num)],
                 maxlen=self.policy_config.model.frame_stack_num
             )
-
+            true_observation_window_stack[env_id] = deque(
+                [to_ndarray(init_obs[env_id]['observation']) for _ in range(self.policy_config.model.frame_stack_num)],
+                maxlen=self.policy_config.model.frame_stack_num
+            )
             game_segments[env_id].reset(observation_window_stack[env_id])
+
+        #============================================
+        # first add Adverse
+        #====================================================
+        if hasattr(self, '_noise_policy'):
+            observation_window_stack = [[] for _ in range(env_nums)]
+            true_observation_window_stack = [[] for _ in range(env_nums)]
+            if self._noise_policy == 'ppo':
+                stack_obs = {env_id: init_obs[env_id]['observation'] for env_id in range(env_nums)}
+                noise = self._policy_adversary.forward(stack_obs)
+                for env_id in noise.keys():
+                    noise[env_id]['action'] = torch.clamp(noise[env_id]['action'], -1 * self._epsilon, self._epsilon)
+                    observation_window_stack[env_id] = deque(
+                        [to_ndarray(init_obs[env_id]['observation'] + noise[env_id]['action'].tolist()) for _ in
+                         range(self.policy_config.model.frame_stack_num)], maxlen=self.policy_config.model.frame_stack_num
+                    )
+                    true_observation_window_stack[env_id] = deque(
+                        [to_ndarray(init_obs[env_id]['observation']) for _ in
+                         range(self.policy_config.model.frame_stack_num)],
+                        maxlen=self.policy_config.model.frame_stack_num
+                    )
+                    game_segments[env_id].reset(observation_window_stack[env_id], true_observation_window_stack[env_id])
+            elif self._noise_policy == 'random':
+                for env_id in range(env_nums):
+                    noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
+                    noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon)
+                    observation_window_stack[env_id] = deque(
+                        [to_ndarray(init_obs[env_id]['observation'] + noise.numpy()) for _ in
+                         range(self.policy_config.model.frame_stack_num)],
+                        maxlen=self.policy_config.model.frame_stack_num
+                    )
+                    true_observation_window_stack[env_id] = deque(
+                        [to_ndarray(init_obs[env_id]['observation']) for _ in
+                         range(self.policy_config.model.frame_stack_num)],
+                        maxlen=self.policy_config.model.frame_stack_num
+                    )
+                    game_segments[env_id].reset(observation_window_stack[env_id], true_observation_window_stack[env_id])
+
 
         dones = np.array([False for _ in range(env_nums)])
         last_game_segments = [None for _ in range(env_nums)]
@@ -416,7 +458,6 @@ class MuZeroAdversaryCollector(ISerialCollector):
                 to_play = [to_play_dict[env_id] for env_id in ready_env_id]
                 if self.policy_config.use_ture_chance_label_in_chance_encoder:
                     chance_dict = {env_id: chance_dict[env_id] for env_id in ready_env_id}
-                    chance = [chance_dict[env_id] for env_id in ready_env_id]
 
                 stack_obs = to_ndarray(stack_obs)
 
@@ -525,12 +566,13 @@ class MuZeroAdversaryCollector(ISerialCollector):
                     if self.policy_config.use_ture_chance_label_in_chance_encoder:
                         game_segments[env_id].append(
                             actions[env_id], to_ndarray(obs['observation']), reward, action_mask_dict[env_id],
-                            to_play_dict[env_id], chance_dict[env_id]
+                            to_play_dict[env_id], chance_dict[env_id],
+                            true_obs=to_ndarray(obs['observation_true']) if hasattr(self, '_noise_policy') else None
                         )
                     else:
                         game_segments[env_id].append(
                             actions[env_id], to_ndarray(obs['observation']), reward, action_mask_dict[env_id],
-                            to_play_dict[env_id]
+                            to_play_dict[env_id], true_obs=to_ndarray(obs['observation_true']) if hasattr(self, '_noise_policy') else None
                         )
 
                     # NOTE: the position of code snippet is very important.
@@ -560,6 +602,10 @@ class MuZeroAdversaryCollector(ISerialCollector):
 
                     # append the newest obs
                     observation_window_stack[env_id].append(to_ndarray(obs['observation']))
+                    if hasattr(self, '_noise_policy'):
+                        true_observation_window_stack[env_id].append(to_ndarray(obs['observation_true']))
+                    else:
+                        true_observation_window_stack[env_id].append(to_ndarray(obs['observation']))
 
                     # ==============================================================
                     # we will save a game segment if it is the end of the game or the next game segment is finished.
@@ -591,7 +637,8 @@ class MuZeroAdversaryCollector(ISerialCollector):
                             game_segment_length=self.policy_config.game_segment_length,
                             config=self.policy_config
                         )
-                        game_segments[env_id].reset(observation_window_stack[env_id])
+                        game_segments[env_id].reset(observation_window_stack[env_id],
+                                                    init_true_observations=true_observation_window_stack[env_id] if hasattr(self, '_noise_policy') else None)
 
                     self._env_info[env_id]['step'] += 1
                     collected_step += 1
@@ -673,7 +720,50 @@ class MuZeroAdversaryCollector(ISerialCollector):
                             [init_obs[env_id]['observation'] for _ in range(self.policy_config.model.frame_stack_num)],
                             maxlen=self.policy_config.model.frame_stack_num
                         )
+                        true_observation_window_stack[env_id] = deque(
+                            [to_ndarray(init_obs[env_id]['observation']) for _ in
+                             range(self.policy_config.model.frame_stack_num)],
+                            maxlen=self.policy_config.model.frame_stack_num
+                        )
                         game_segments[env_id].reset(observation_window_stack[env_id])
+                        if hasattr(self, '_noise_policy'):
+                            observation_window_stack = [[] for _ in range(env_nums)]
+                            true_observation_window_stack = [[] for _ in range(env_nums)]
+                            if self._noise_policy == 'ppo':
+                                stack_obs = {env_id: init_obs[env_id]['observation'] for env_id in range(env_nums)}
+                                noise = self._policy_adversary.forward(stack_obs)
+                                for env_id in noise.keys():
+                                    noise[env_id]['action'] = torch.clamp(noise[env_id]['action'], -1 * self._epsilon,
+                                                                          self._epsilon)
+                                    observation_window_stack[env_id] = deque(
+                                        [to_ndarray(init_obs[env_id]['observation'] + noise[env_id]['action'].tolist()) for _ in
+                                         range(self.policy_config.model.frame_stack_num)],
+                                        maxlen=self.policy_config.model.frame_stack_num
+                                    )
+                                    true_observation_window_stack[env_id] = deque(
+                                        [to_ndarray(init_obs[env_id]['observation']) for _ in
+                                         range(self.policy_config.model.frame_stack_num)],
+                                        maxlen=self.policy_config.model.frame_stack_num
+                                    )
+                                    game_segments[env_id].reset(observation_window_stack[env_id],
+                                                                true_observation_window_stack[env_id])
+                            elif self._noise_policy == 'random':
+                                for env_id in range(env_nums):
+                                    noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
+                                    noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon)
+                                    observation_window_stack[env_id] = deque(
+                                        [to_ndarray(init_obs[env_id]['observation'] + noise.numpy()) for _ in
+                                         range(self.policy_config.model.frame_stack_num)],
+                                        maxlen=self.policy_config.model.frame_stack_num
+                                    )
+                                    true_observation_window_stack[env_id] = deque(
+                                        [to_ndarray(init_obs[env_id]['observation']) for _ in
+                                         range(self.policy_config.model.frame_stack_num)],
+                                        maxlen=self.policy_config.model.frame_stack_num
+                                    )
+                                    game_segments[env_id].reset(observation_window_stack[env_id],
+                                                                true_observation_window_stack[env_id])
+
                         last_game_segments[env_id] = None
                         last_game_priorities[env_id] = None
 

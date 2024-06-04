@@ -159,8 +159,8 @@ mujoco_sampled_efficientzero_create_config = dict(
     ),
     env_manager=dict(type='subprocess'),
     policy=dict(
-        type='sampled_adversary_efficientzero',
-        import_names=['lzero.policy.sampled_adversary_efficientzero'],
+        type='sampled_efficientzero',
+        import_names=['lzero.policy.sampled_efficientzero'],
         learner=dict(
             train_iterations=int(1e4),
             dataloader=dict(num_workers=0, ),

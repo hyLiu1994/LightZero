@@ -63,6 +63,25 @@ class AdversaryGameSegment(GameSegment):
             stacked_obs = [jpeg_data_decompressor(obs, self.gray_scale) for obs in stacked_obs]
         return stacked_obs
 
+    def get_unroll_true_obs(self, timestep: int, num_unroll_steps: int = 0, padding: bool = False) -> np.ndarray:
+        """
+        Overview:
+            Get an observation of the correct format: o[t, t + stack frames + num_unroll_steps].
+        Arguments:
+            - timestep (int): The time step.
+            - num_unroll_steps (int): The extra length of the observation frames.
+            - padding (bool): If True, pad frames if (t + stack frames) is outside of the trajectory.
+        """
+        stacked_true_obs = self.obs_true_segment[timestep:timestep + self.frame_stack_num + num_unroll_steps]
+        if padding:
+            pad_len = self.frame_stack_num + num_unroll_steps - len(stacked_true_obs)
+            if pad_len > 0:
+                pad_frames = np.array([stacked_true_obs[-1] for _ in range(pad_len)])
+                stacked_true_obs = np.concatenate((stacked_true_obs, pad_frames))
+        if self.transform2string:
+            stacked_true_obs = [jpeg_data_decompressor(obs, self.gray_scale) for obs in stacked_true_obs]
+        return stacked_true_obs
+
     def zero_obs(self) -> List:
         """
         Overview:
@@ -98,6 +117,7 @@ class AdversaryGameSegment(GameSegment):
             action_mask: np.ndarray = None,
             to_play: int = -1,
             chance: int = 0,
+            true_obs: np.ndarray = None,
     ) -> None:
         """
         Overview:
@@ -111,10 +131,14 @@ class AdversaryGameSegment(GameSegment):
         self.to_play_segment.append(to_play)
         if self.use_ture_chance_label_in_chance_encoder:
             self.chance_segment.append(chance)
+        if true_obs is None:
+            self.obs_true_segment.append(obs)
+        else:
+            self.obs_true_segment.append(true_obs)
 
     def pad_over(
             self, next_segment_observations: List, next_segment_rewards: List, next_segment_root_values: List,
-            next_segment_child_visits: List, next_segment_improved_policy: List = None, next_chances: List = None,
+            next_segment_child_visits: List, next_segment_improved_policy: List = None, next_chances: List = None, next_segment_true_observations: List = None
     ) -> None:
         """
         Overview:
@@ -130,6 +154,7 @@ class AdversaryGameSegment(GameSegment):
             - next_segment_improved_policy (:obj:`list`): root children select policy of MCTS from the next game_segment (Only used in Gumbel MuZero)
         """
         assert len(next_segment_observations) <= self.num_unroll_steps
+        assert len(next_segment_true_observations) <= self.num_unroll_steps
         assert len(next_segment_child_visits) <= self.num_unroll_steps
         assert len(next_segment_root_values) <= self.num_unroll_steps + self.td_steps
         assert len(next_segment_rewards) <= self.num_unroll_steps + self.td_steps - 1
@@ -142,6 +167,9 @@ class AdversaryGameSegment(GameSegment):
         # NOTE: next block observation should start from (stacked_observation - 1) in next trajectory
         for observation in next_segment_observations:
             self.obs_segment.append(copy.deepcopy(observation))
+
+        for observation in next_segment_true_observations:
+            self.obs_true_segment.append(copy.deepcopy(observation))
 
         for reward in next_segment_rewards:
             self.reward_segment.append(reward)
@@ -234,6 +262,7 @@ class AdversaryGameSegment(GameSegment):
             different lengths. In such scenarios, it is necessary to use the object data type for `self.child_visit_segment`.
         """
         self.obs_segment = np.array(self.obs_segment)
+        self.obs_true_segment = np.array(self.obs_true_segment)
         self.action_segment = np.array(self.action_segment)
         self.reward_segment = np.array(self.reward_segment)
 
@@ -254,7 +283,7 @@ class AdversaryGameSegment(GameSegment):
         if self.use_ture_chance_label_in_chance_encoder:
             self.chance_segment = np.array(self.chance_segment)
 
-    def reset(self, init_observations: np.ndarray) -> None:
+    def reset(self, init_observations: np.ndarray, init_true_observations: np.ndarray = None) -> None:
         """
         Overview:
             Initialize the game segment using ``init_observations``,
@@ -263,6 +292,7 @@ class AdversaryGameSegment(GameSegment):
             - init_observations (:obj:`list`): list of the stack observations in the previous time steps.
         """
         self.obs_segment = []
+        self.obs_true_segment = []
         self.action_segment = []
         self.reward_segment = []
 
@@ -278,6 +308,14 @@ class AdversaryGameSegment(GameSegment):
 
         for observation in init_observations:
             self.obs_segment.append(copy.deepcopy(observation))
+
+        if init_true_observations is not None:
+            for true_observation in init_true_observations:
+                self.obs_true_segment.append(copy.deepcopy(true_observation))
+        else:
+            self.obs_true_segment = self.obs_segment
+
+
 
     def is_full(self) -> bool:
         """
