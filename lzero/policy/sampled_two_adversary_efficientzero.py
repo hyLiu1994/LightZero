@@ -474,8 +474,6 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
 
                         consistency_loss += temp_loss
 
-                        # sim_cl_loss.append(temp_loss)
-
             # NOTE: the target policy, target_value_categorical, target_value_prefix_categorical is calculated in
             # game buffer now.
             # ==============================================================

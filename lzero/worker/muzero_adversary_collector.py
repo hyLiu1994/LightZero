@@ -814,8 +814,6 @@ class MuZeroAdversaryCollector(ISerialCollector):
 
         # log
         self._output_log(train_iter)
-        # init_obs = self._env.ready_obs
-        # print(init_obs)
         return return_data
 
     def _output_log(self, train_iter: int) -> None:
