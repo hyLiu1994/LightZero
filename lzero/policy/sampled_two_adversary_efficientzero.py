@@ -242,8 +242,9 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         Overview:
             Learn mode init method. Called by ``self.__init__``. Initialize the learn model, optimizer and MCTS utils.
         """
-        self.x = Variable(torch.rand(1), requires_grad=True).to(self._cfg.device)
-        self.y = Variable(torch.rand(1), requires_grad=True).to(self._cfg.device)
+        # self.x = Variable(torch.rand(1), requires_grad=True).to(self._cfg.device)
+        # self.y = Variable(torch.rand(1), requires_grad=True).to(self._cfg.device)
+        self.c3 = 2.0
         assert self._cfg.optim_type in ['SGD', 'Adam', 'AdamW'], self._cfg.optim_type
         if self._cfg.model.continuous_action_space:
             # Weight Init for the last output layer of gaussian policy head in prediction network.
@@ -466,11 +467,14 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
                     true_obs = to_tensor(true_obs)
 
                     # NOTE: no grad for the representation_state branch.
-                    obs_proj = self._learn_model.project(obs, with_grad=True)
-                    true_obs_proj = self._learn_model.project(true_obs, with_grad=False)
-                    temp_loss = negative_cosine_similarity(obs_proj, true_obs_proj) * mask_batch[:, step_k]
+                    if step_k == 0:
+                        obs_proj = self._learn_model.project(obs, with_grad=True)
+                        true_obs_proj = self._learn_model.project(true_obs, with_grad=False)
+                        temp_loss = negative_cosine_similarity(obs_proj, true_obs_proj) * mask_batch[:, step_k]
 
-                    consistency_loss += temp_loss
+                        consistency_loss += temp_loss
+
+                        # sim_cl_loss.append(temp_loss)
 
             # NOTE: the target policy, target_value_categorical, target_value_prefix_categorical is calculated in
             # game buffer now.
@@ -530,7 +534,7 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
                 self._cfg.value_loss_weight * value_loss + self._cfg.reward_loss_weight * value_prefix_loss +
                 self._cfg.policy_entropy_loss_weight * policy_entropy_loss
         )
-        weighted_total_loss = (weights * loss).mean()
+        # weighted_total_loss = (weights * loss).mean()
 
         if self._cfg.monitor_extra_statistics:
             predicted_value_prefixs = torch.stack(predicted_value_prefixs).transpose(1, 0).squeeze(-1)
@@ -538,9 +542,9 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
 
         return_data = {
             'loss': loss,
+            'sim_cl_loss': consistency_loss,
             'cur_lr': self._optimizer.param_groups[0]['lr'],
             'collect_mcts_temperature': self._collect_mcts_temperature,
-            'weighted_total_loss': weighted_total_loss.item(),
             'total_loss': loss.mean().item(),
             'policy_loss': policy_loss.mean().item(),
             'policy_entropy': policy_entropy.item() / (self._cfg.num_unroll_steps + 1),
@@ -610,8 +614,10 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
 
         return_data_ppo = self._forward_learn_before(data[0])
         return_data_random = self._forward_learn_before(data[1])
-        weighted_total_loss = self.x * return_data_ppo['weighted_total_loss'] + self.y * return_data_random['weighted_total_loss']
-        loss = self.x * return_data_ppo['loss'] + self.y * return_data_random['loss']
+        ppo_sim_cl_loss = return_data_ppo['sim_cl_loss']
+        random_sim_cl_loss = return_data_random['sim_cl_loss']
+        w1 = 1./(1.+ torch.exp(self.c3 * (ppo_sim_cl_loss + 1.)))
+        weighted_total_loss = (return_data_ppo['loss'] + w1 * return_data_random['loss']).mean()
 
         gradient_scale = 1 / self._cfg.num_unroll_steps
         weighted_total_loss.register_hook(lambda grad: grad * gradient_scale)
@@ -631,11 +637,11 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         # ==============================================================
         self._target_model.update(self._learn_model.state_dict())
 
+        # ToDO
         return_data = {
             'cur_lr': self._optimizer.param_groups[0]['lr'],
             'collect_mcts_temperature': self._collect_mcts_temperature,
             'weighted_total_loss': weighted_total_loss.item(),
-            'total_loss': loss.mean().item(),
             'policy_loss': (return_data_ppo['policy_loss'] + return_data_random['policy_loss']) / 2.,
             'policy_entropy': (return_data_ppo['policy_entropy'] + return_data_random['policy_entropy']) / 2.,
             'target_policy_entropy': (return_data_ppo['target_policy_entropy'] + return_data_random['target_policy_entropy']) / 2.,

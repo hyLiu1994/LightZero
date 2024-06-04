@@ -253,6 +253,7 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
             except Exception as exception:
                 logging.warning(exception)
 
+        self.c3 = 2.0
         if self._cfg.optim_type == 'SGD':
             self._optimizer = optim.SGD(
                 self._model.parameters(),
@@ -462,11 +463,13 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
                     true_obs = to_tensor(true_obs_batch)
 
                     # NOTE: no grad for the representation_state branch.
-                    obs_proj = self._learn_model.project(obs, with_grad=True)
-                    true_obs_proj = self._learn_model.project(true_obs, with_grad=False)
-                    temp_loss = negative_cosine_similarity(obs_proj, true_obs_proj) * mask_batch[:, step_k]
+                    if step_k == 0:
+                        obs_proj = self._learn_model.project(obs, with_grad=True)
+                        true_obs_proj = self._learn_model.project(true_obs, with_grad=False)
+                        temp_loss = negative_cosine_similarity(obs_proj, true_obs_proj) * mask_batch[:, step_k]
 
-                    consistency_loss += temp_loss
+                        consistency_loss += temp_loss
+
 
             # NOTE: the target policy, target_value_categorical, target_value_prefix_categorical is calculated in
             # game buffer now.
@@ -526,7 +529,7 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
                 self._cfg.value_loss_weight * value_loss + self._cfg.reward_loss_weight * value_prefix_loss +
                 self._cfg.policy_entropy_loss_weight * policy_entropy_loss
         )
-        weighted_total_loss = (weights * loss).mean()
+        weighted_total_loss = (self.c3 * loss).mean()
 
         gradient_scale = 1 / self._cfg.num_unroll_steps
         weighted_total_loss.register_hook(lambda grad: grad * gradient_scale)

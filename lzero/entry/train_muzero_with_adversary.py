@@ -60,7 +60,7 @@ def train_muzero_with_adversary(
     elif create_cfg.policy.type == 'efficientzero':
         from lzero.mcts import EfficientZeroGameBuffer as GameBuffer
     elif create_cfg.policy.type == 'sampled_efficientzero':
-        from lzero.mcts import SampledEfficientZeroGameBuffer as GameBuffer
+        from lzero.mcts import AdversarySampledEfficientZeroGameBuffer as GameBuffer
     elif create_cfg.policy.type == 'sampled_adversary_efficientzero':
         from lzero.mcts import AdversarySampledEfficientZeroGameBuffer as GameBuffer
     elif create_cfg.policy.type == 'sampled_two_adversary_efficientzero':
