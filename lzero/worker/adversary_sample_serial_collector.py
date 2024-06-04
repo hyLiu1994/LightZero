@@ -302,6 +302,8 @@ class AdversarySampleSerialCollector(ISerialCollector):
 
             # TODO(nyz) vectorize this for loop
             for env_id, timestep in timesteps.items():
+                if (self._policy_output_pool[env_id] == None):
+                    continue
                 with self._timer:
                     if timestep.info.get('abnormal', False):
                         # If there is an abnormal timestep, reset all the related variables(including this env).
