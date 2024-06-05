@@ -269,22 +269,26 @@ def train_muzero_with_adversary(
         else:
             collect_kwargs['epsilon'] = 0.0
 
+        print("Begin Evaluator!")
         # Evaluate policy performance.
         if evaluator.should_eval(learner.train_iter):
             stop, _ = evaluator.eval(learner.save_checkpoint, learner.train_iter, collector.envstep)
             if stop:
                 break
 
+        print("Begin PPO Evaluator!")
         if ppo_evaluator.should_eval(learner.train_iter):
             stop, _ = ppo_evaluator.eval(learner.save_checkpoint, learner.train_iter, collector.envstep)
             if stop:
                 break
 
+        print("Begin Random Evaluator!")
         if random_evaluator.should_eval(learner.train_iter):
             stop, _ = random_evaluator.eval(learner.save_checkpoint, learner.train_iter, collector.envstep)
             if stop:
                 break
 
+        print("Begin Collect!")
         # Collect data by default config n_sample/n_episode.
         new_data = collector.collect(train_iter=learner.train_iter, policy_kwargs=collect_kwargs)
 
@@ -297,6 +301,7 @@ def train_muzero_with_adversary(
         # remove the oldest data if the replay buffer is full.
         replay_buffer.remove_oldest_data_to_fit()
 
+        print("Begin Learn!")
         # Learn policy from collected data.
         for i in range(update_per_collect):
             # Learner will train ``update_per_collect`` times in one iteration.
@@ -320,15 +325,18 @@ def train_muzero_with_adversary(
         # Collecting Data for Adversary.
         collect_adversary_kwargs = commander.step()
         # Evaluate policy performance
+        print("Begin Adversary Evaluator!")
         if evaluator_adversary.should_eval(learner_adversary.train_iter):
             stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint, 
                                                        learner_adversary.train_iter, collector_adversary.envstep)
             if stop:
                 break
 
+        print("Begin Adversary Collector!")
         # Collect data by default config n_sample/n_episode
         new_data = collector_adversary.collect(train_iter=learner_adversary.train_iter, policy_kwargs=collect_adversary_kwargs)
 
+        print("Begin Adversary Learner!")
         # Learn policy from collected data
         learner_adversary.train(new_data, collector_adversary.envstep)
 
