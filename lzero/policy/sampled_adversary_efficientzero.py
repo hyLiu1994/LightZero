@@ -163,6 +163,7 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
         # (float) The weight of ssl (self-supervised learning) loss.
         ssl_loss_weight=2,
         ssl_adversary_loss_weight=2,
+        c3 = 2.0,
         # (bool) Whether to use the cosine learning rate decay.
         cos_lr_scheduler=False,
         # (bool) Whether to use piecewise constant learning rate decay.
@@ -253,7 +254,6 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
             except Exception as exception:
                 logging.warning(exception)
 
-        self.c3 = 2.0
         if self._cfg.optim_type == 'SGD':
             self._optimizer = optim.SGD(
                 self._model.parameters(),
@@ -529,7 +529,7 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
                 self._cfg.value_loss_weight * value_loss + self._cfg.reward_loss_weight * value_prefix_loss +
                 self._cfg.policy_entropy_loss_weight * policy_entropy_loss
         )
-        weighted_total_loss = (self.c3 * loss).mean()
+        weighted_total_loss = (self._cfg.c3 * loss).mean()
 
         gradient_scale = 1 / self._cfg.num_unroll_steps
         weighted_total_loss.register_hook(lambda grad: grad * gradient_scale)
