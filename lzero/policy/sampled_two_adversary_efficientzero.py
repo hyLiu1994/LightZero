@@ -164,6 +164,7 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         # (float) The weight of ssl (self-supervised learning) loss.
         ssl_loss_weight=2,
         ssl_adversary_loss_weight=2,
+        c3 = 2,
         # (bool) Whether to use the cosine learning rate decay.
         cos_lr_scheduler=False,
         # (bool) Whether to use piecewise constant learning rate decay.
@@ -242,9 +243,6 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         Overview:
             Learn mode init method. Called by ``self.__init__``. Initialize the learn model, optimizer and MCTS utils.
         """
-        # self.x = Variable(torch.rand(1), requires_grad=True).to(self._cfg.device)
-        # self.y = Variable(torch.rand(1), requires_grad=True).to(self._cfg.device)
-        self.c3 = 2.0
         assert self._cfg.optim_type in ['SGD', 'Adam', 'AdamW'], self._cfg.optim_type
         if self._cfg.model.continuous_action_space:
             # Weight Init for the last output layer of gaussian policy head in prediction network.
@@ -614,7 +612,7 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         return_data_random = self._forward_learn_before(data[1])
         ppo_sim_cl_loss = return_data_ppo['sim_cl_loss']
         random_sim_cl_loss = return_data_random['sim_cl_loss']
-        w1 = 1./(1.+ torch.exp(self.c3 * (ppo_sim_cl_loss + 1.)))
+        w1 = 1./(1.+ torch.exp(self._cfg.c3 * (ppo_sim_cl_loss + 1.)))
         weighted_total_loss = (return_data_ppo['loss'] + w1 * return_data_random['loss']).mean()
 
         gradient_scale = 1 / self._cfg.num_unroll_steps
