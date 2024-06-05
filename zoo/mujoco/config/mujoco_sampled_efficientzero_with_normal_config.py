@@ -45,7 +45,7 @@ policy_entropy_loss_weight = 0.005
 
 mujoco_sampled_efficientzero_config = dict(
     exp_name=
-f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_without_adversary_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+f'data_sez_ctree/{env_id[:-3]}_Muzero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -87,7 +87,7 @@ f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_without_adversary_ns{num_si
         replay_buffer_size=int(1e6),
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
-        mcts_ctree=False,
+        mcts_ctree=True,
         noise_policy = 'normal'
     ),
     policy_adversary=dict(
@@ -104,7 +104,7 @@ f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_without_adversary_ns{num_si
         learn=dict(
             epoch_per_collect=1,
             update_per_collect=1,
-            batch_size=32,
+            batch_size=batch_size,
             learning_rate=3e-4,
             value_weight=0.5,
             entropy_weight=0.001,
@@ -120,7 +120,7 @@ f'data_sez_ctree/{env_id[:-3]}_sampled_efficientzero_without_adversary_ns{num_si
             grad_clip_value=0.5,
         ),
         collect=dict(
-            n_sample=32,
+            n_sample=batch_size,
             unroll_len=1,
             discount_factor=0.99,
             gae_lambda=0.95,

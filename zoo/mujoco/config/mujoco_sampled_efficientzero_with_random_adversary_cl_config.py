@@ -89,7 +89,7 @@ mujoco_sampled_efficientzero_config = dict(
         replay_buffer_size=int(1e6),
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
-        mcts_ctree=False,
+        mcts_ctree=True,
         noise_policy = 'random'
     ),
     policy_adversary=dict(
@@ -106,7 +106,7 @@ mujoco_sampled_efficientzero_config = dict(
         learn=dict(
             epoch_per_collect=1,
             update_per_collect=1,
-            batch_size=32,
+            batch_size=batch_size,
             learning_rate=3e-4,
             value_weight=0.5,
             entropy_weight=0.001,
@@ -122,7 +122,7 @@ mujoco_sampled_efficientzero_config = dict(
             grad_clip_value=0.5,
         ),
         collect=dict(
-            n_sample=32,
+            n_sample=batch_size,
             unroll_len=1,
             discount_factor=0.99,
             gae_lambda=0.95,
