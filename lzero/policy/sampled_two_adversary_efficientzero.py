@@ -615,7 +615,7 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         ppo_sim_cl_loss = return_data_ppo['sim_cl_loss']
         random_sim_cl_loss = return_data_random['sim_cl_loss']
         w1 = 1./(1.+ torch.exp(self.c3 * (ppo_sim_cl_loss + 1.)))
-        weighted_total_loss = (return_data_ppo['loss'] + w1 * return_data_random['loss']).mean()
+        weighted_total_loss = (return_data_ppo['loss'] + w1.tolist() * return_data_random['loss']).mean()
 
         gradient_scale = 1 / self._cfg.num_unroll_steps
         weighted_total_loss.register_hook(lambda grad: grad * gradient_scale)

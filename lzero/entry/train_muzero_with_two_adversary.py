@@ -115,7 +115,7 @@ def train_muzero_with_two_adversary(
     # Create worker components: learner, collector, evaluator, replay buffer, commander.
     tb_logger = SummaryWriter(os.path.join('./{}/log/'.format(cfg.exp_name), 'serial')) if get_rank() == 0 else None
     # tb_logger_adversary = SummaryWriter(os.path.join('./{}/log/'.format(cfg.exp_name + "_adversary"), 'serial'))
-    learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, instance_name='muzero_learner',
+    learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, instance_name='agent_learner',
                           exp_name=cfg.exp_name)
     learner_adversary = BaseLearner(cfg.policy_adversary.learn.learner, policy_adversary.learn_mode,
                                     tb_logger, instance_name='adversary_learner', exp_name=cfg.exp_name)
@@ -137,7 +137,7 @@ def train_muzero_with_two_adversary(
         tb_logger=tb_logger,
         exp_name=cfg.exp_name,
         policy_config=policy_config,
-        instance_name="muzero_evaluator"
+        instance_name="agent_evaluator"
     )
     collector = Collector(
         env=ppo_collector_env,
@@ -145,7 +145,7 @@ def train_muzero_with_two_adversary(
         policy_adversary=policy_adversary.collect_mode,
         tb_logger=tb_logger,
         exp_name=cfg.exp_name,
-        instance_name="muzero_collector_with_ppo",
+        instance_name="agent_collector_with_ppo",
         policy_config=policy_config,
         policy_adversary_config=policy_adversary_config
     )
@@ -158,7 +158,7 @@ def train_muzero_with_two_adversary(
         policy_adversary=policy_adversary.eval_mode,
         tb_logger=tb_logger,
         exp_name=cfg.exp_name,
-        instance_name='muzero_evaluator_with_ppo',
+        instance_name='agent_evaluator_with_ppo',
         policy_config=policy_config,
         policy_adversary_config=policy_adversary_config
     )
@@ -168,7 +168,7 @@ def train_muzero_with_two_adversary(
         policy_adversary=None,
         tb_logger=tb_logger,
         exp_name=cfg.exp_name,
-        instance_name="muzero_collector_with_random",
+        instance_name="agent_collector_with_random",
         policy_config=policy_config,
         policy_adversary_config=policy_random_adversary_config
     )
@@ -181,7 +181,7 @@ def train_muzero_with_two_adversary(
         policy_adversary=None,
         tb_logger=tb_logger,
         exp_name=cfg.exp_name,
-        instance_name='muzero_evaluator_with_random',
+        instance_name='agent_evaluator_with_random',
         policy_config=policy_config,
         policy_adversary_config=policy_random_adversary_config
     )
