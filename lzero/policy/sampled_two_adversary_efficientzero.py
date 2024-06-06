@@ -8,10 +8,10 @@ from ding.model import model_wrap
 from ding.torch_utils import to_tensor
 from ding.utils import POLICY_REGISTRY
 from ditk import logging
-from torch.autograd import Variable
 from torch.distributions import Categorical, Independent, Normal
 from torch.nn import L1Loss
 
+from lzero.policy import adversary_adam
 from lzero.mcts import SampledEfficientZeroMCTSCtree as MCTSCtree
 from lzero.mcts import SampledEfficientZeroMCTSPtree as MCTSPtree
 from lzero.model import ImageTransforms
@@ -264,7 +264,7 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
             )
 
         elif self._cfg.optim_type == 'Adam':
-            self._optimizer = optim.Adam(
+            self._optimizer = adversary_adam.Adam(
                 self._model.parameters(), lr=self._cfg.learning_rate, weight_decay=self._cfg.weight_decay
             )
         elif self._cfg.optim_type == 'AdamW':
