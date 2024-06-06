@@ -11,7 +11,7 @@ from ditk import logging
 from torch.distributions import Categorical, Independent, Normal
 from torch.nn import L1Loss
 
-from lzero.policy import adversary_adam
+from lzero.optim import adversary_adam
 from lzero.mcts import SampledEfficientZeroMCTSCtree as MCTSCtree
 from lzero.mcts import SampledEfficientZeroMCTSPtree as MCTSPtree
 from lzero.model import ImageTransforms
@@ -243,7 +243,7 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         Overview:
             Learn mode init method. Called by ``self.__init__``. Initialize the learn model, optimizer and MCTS utils.
         """
-        assert self._cfg.optim_type in ['SGD', 'Adam', 'AdamW'], self._cfg.optim_type
+        assert self._cfg.optim_type in ['SGD', 'Adam', 'AdamW', 'AdamAd'], self._cfg.optim_type
         if self._cfg.model.continuous_action_space:
             # Weight Init for the last output layer of gaussian policy head in prediction network.
             init_w = self._cfg.init_w
@@ -264,8 +264,12 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
             )
 
         elif self._cfg.optim_type == 'Adam':
-            self._optimizer = adversary_adam.Adam(
+            self._optimizer = optim.Adam(
                 self._model.parameters(), lr=self._cfg.learning_rate, weight_decay=self._cfg.weight_decay
+            )
+        elif self._cfg.optim_type == 'AdamAd':
+            self._optimizer = adversary_adam.Adam(
+                self._model.parameters(), lr=self._cfg.learning_rate, weight_decay=self._cfg.weight_decay, adversary_weight_decay=self._cfg.adversary_weight_decay
             )
         elif self._cfg.optim_type == 'AdamW':
             self._optimizer = configure_optimizers(

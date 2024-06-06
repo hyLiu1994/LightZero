@@ -116,7 +116,7 @@ class Adam(Optimizer):
     """
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
-                 weight_decay=0, amsgrad=False, *, foreach: Optional[bool] = None,
+                 weight_decay=0, adversary_weight_decay = 0, amsgrad=False, *, foreach: Optional[bool] = None,
                  maximize: bool = False, capturable: bool = False,
                  differentiable: bool = False, fused: bool = False):
         if not 0.0 <= lr:
@@ -130,7 +130,7 @@ class Adam(Optimizer):
         if not 0.0 <= weight_decay:
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
         defaults = dict(lr=lr, betas=betas, eps=eps,
-                        weight_decay=weight_decay, amsgrad=amsgrad,
+                        weight_decay=weight_decay, adversary_weight_decay = adversary_weight_decay, amsgrad=amsgrad,
                         maximize=maximize, foreach=foreach, capturable=capturable,
                         differentiable=differentiable, fused=fused)
         super(Adam, self).__init__(params, defaults)
@@ -241,6 +241,7 @@ class Adam(Optimizer):
                  beta2=beta2,
                  lr=group['lr'],
                  weight_decay=group['weight_decay'],
+                 adversary_weight_decay = group['adversary_weight_decay'],
                  eps=group['eps'],
                  maximize=group['maximize'],
                  foreach=group['foreach'],
@@ -273,6 +274,7 @@ def adam(params: List[Tensor],
          beta2: float,
          lr: float,
          weight_decay: float,
+         adversary_weight_decay: float,
          eps: float,
          maximize: bool):
     r"""Functional API that performs Adam algorithm computation.
@@ -291,8 +293,8 @@ def adam(params: List[Tensor],
 
     if foreach and not torch.jit.is_scripting():
         func = _multi_tensor_adam
-    elif fused and not torch.jit.is_scripting():
-        func = _fused_adam
+    # elif fused and not torch.jit.is_scripting():
+    #     func = _fused_adam
     else:
         func = _single_tensor_adam
 
@@ -307,6 +309,7 @@ def adam(params: List[Tensor],
          beta2=beta2,
          lr=lr,
          weight_decay=weight_decay,
+         lambda_t=adversary_weight_decay,
          eps=eps,
          maximize=maximize,
          capturable=capturable,
@@ -329,6 +332,7 @@ def _single_tensor_adam(params: List[Tensor],
                         beta2: float,
                         lr: float,
                         weight_decay: float,
+                        lambda_t:float,
                         eps: float,
                         maximize: bool,
                         capturable: bool,
@@ -351,6 +355,9 @@ def _single_tensor_adam(params: List[Tensor],
 
         if weight_decay != 0:
             grad = grad.add(param, alpha=weight_decay)
+
+        if lambda_t != 0:
+            grad = grad.add(torch.abs(param), alpha=lambda_t)
 
         if torch.is_complex(param):
             grad = torch.view_as_real(grad)
@@ -425,6 +432,7 @@ def _multi_tensor_adam(params: List[Tensor],
                        beta2: float,
                        lr: float,
                        weight_decay: float,
+                       lambda_t:float,
                        eps: float,
                        maximize: bool,
                        capturable: bool,
@@ -452,8 +460,10 @@ def _multi_tensor_adam(params: List[Tensor],
     torch._foreach_add_(state_steps, 1)
 
     if weight_decay != 0:
-        # torch._foreach_add_(grads, params, alpha=weight_decay)
-        torch._foreach_add_(grads, torch.abs(grads), alpha=weight_decay)
+        torch._foreach_add_(grads, params, alpha=weight_decay)
+
+    if lambda_t != 0:
+        torch._foreach_add_(grads, torch.abs(grads), alpha=lambda_t)
 
     # Decay the first and second moment running average coefficient
     torch._foreach_mul_(exp_avgs, beta1)
@@ -563,6 +573,7 @@ def _fused_adam(
     beta2: float,
     lr: float,
     weight_decay: float,
+    lambda_t: float,
     eps: float,
     maximize: bool,
     capturable: bool,  # Needed for consistency.
