@@ -317,7 +317,7 @@ def train_muzero_with_two_adversary(
             # The core train steps for MCTS+RL algorithms.
             log_vars = learner.train([train_data,train_random_data], collector.envstep)
 
-            if cfg.policy.use_priority:
+            if cfg.policy.use_priority: # 日志打印是否有问题
                 replay_buffer.update_priority(train_data, log_vars[0]['value_priority_orig'])
                 replay_random_buffer.update_priority(train_random_data, log_vars[0]['value_priority_orig'])
 

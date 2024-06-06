@@ -44,7 +44,7 @@ eval_freq = 50
 
 mujoco_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree/{env_id[:-3]}_RobustZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}_AdversaryPPO',
+    f'data_sez_ctree/{env_id[:-3]}_RobustZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}_AdversaryPPOAndRandom',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -77,7 +77,7 @@ mujoco_sampled_efficientzero_config = dict(
         update_per_collect=update_per_collect,
         batch_size=batch_size,
         discount_factor=0.997,
-        optim_type='AdamW',
+        optim_type='Adam',
         lr_piecewise_constant_decay=False,
         learning_rate=0.003,
         grad_clip_value=0.5,
