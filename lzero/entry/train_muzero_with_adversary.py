@@ -2,6 +2,7 @@ import logging
 import os
 from functools import partial
 from typing import Optional, Tuple
+from copy import deepcopy
 
 import torch
 from ding.envs import create_env_manager
@@ -83,27 +84,49 @@ def train_muzero_with_adversary(
     cfg = compile_config(cfg, seed=seed, env=None, auto=True, create_cfg=create_cfg, save_cfg=True, have_adversary=True)
     # Create main components: env, policy
     env_fn, collector_env_cfg, evaluator_env_cfg = get_vec_env_setting(cfg.env)
+    # normal_collect_env_cfg = collector_env_cfg.copy()
+    # for ncec in normal_collect_env_cfg:
+    #     ncec.env_type = 'normal_collector'
+    normal_collector_env_cfg = deepcopy(collector_env_cfg)
+    [nc.__setattr__('env_type', 'normal_collector') for nc in normal_collector_env_cfg]
+    normal_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
+    [ne.__setattr__('env_type', 'normal_evaluator') for ne in normal_evaluator_env_cfg]
+
+    ppo_collector_env_cfg = deepcopy(collector_env_cfg)
+    [pc.__setattr__('env_type', 'ppo_collector') for pc in ppo_collector_env_cfg]
+    ppo_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
+    [pe.__setattr__('env_type', 'ppo_evaluator') for pe in ppo_evaluator_env_cfg]
+
+    random_collector_env_cfg = deepcopy(collector_env_cfg)
+    [rc.__setattr__('env_type', 'random_collector') for rc in random_collector_env_cfg]
+    random_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
+    [re.__setattr__('env_type', 'random_evaluator') for re in random_evaluator_env_cfg]
+
+    ppo_adversary_collector_env_cfg = deepcopy(collector_env_cfg)
+    [pca.__setattr__('env_type', 'ppo_adversary_collector') for pca in ppo_adversary_collector_env_cfg]
+    ppo_adversary_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
+    [pea.__setattr__('env_type', 'ppo_adversary_evaluator') for pea in ppo_adversary_evaluator_env_cfg]
 
     if cfg.policy.noise_policy == 'normal' :
-        collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
+        collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in normal_collector_env_cfg])
         collector_env.seed(cfg.seed)
-    evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
+    evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in normal_evaluator_env_cfg])
     evaluator_env.seed(cfg.seed, dynamic_seed=False)
 
     if cfg.policy.noise_policy == 'ppo':
-        ppo_collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
+        ppo_collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_collector_env_cfg])
         ppo_collector_env.seed(cfg.seed)
-    ppo_evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
+    ppo_evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_evaluator_env_cfg])
     ppo_evaluator_env.seed(cfg.seed, dynamic_seed=False)
 
     if cfg.policy.noise_policy == 'random':
-        random_collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
+        random_collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in random_collector_env_cfg])
         random_collector_env.seed(cfg.seed)
-    random_evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
+    random_evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in random_evaluator_env_cfg])
     random_evaluator_env.seed(cfg.seed, dynamic_seed=False)
 
-    collector_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
-    evaluator_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
+    collector_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_adversary_collector_env_cfg])
+    evaluator_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_adversary_evaluator_env_cfg])
     collector_adversary_env.seed(cfg.seed)
     evaluator_adversary_env.seed(cfg.seed, dynamic_seed=False)
     set_pkg_seed(cfg.seed, use_cuda=cfg.policy.cuda)

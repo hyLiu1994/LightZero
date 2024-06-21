@@ -105,16 +105,16 @@ class Node:
             self.sigma = sigma
             dist = Independent(Normal(mu, sigma), 1)
             # print(dist.batch_shape, dist.event_shape)
-            sampled_actions_before_tanh = dist.sample(torch.tensor([self.num_of_sampled_actions]))  # [20, 3]
+            sampled_actions_before_tanh = dist.sample(torch.tensor([self.num_of_sampled_actions]))
 
-            sampled_actions = torch.tanh(sampled_actions_before_tanh)  # [ 20, 3]
+            sampled_actions = torch.tanh(sampled_actions_before_tanh)
             y = 1 - sampled_actions.pow(2) + 1e-6
             # keep dimension for loss computation (usually for action space is 1 env. e.g. pendulum)
             log_prob = dist.log_prob(sampled_actions_before_tanh).unsqueeze(-1)
-            log_prob = log_prob - torch.log(y).sum(-1, keepdim=True)  # [20,1]
+            log_prob = log_prob - torch.log(y).sum(-1, keepdim=True)
             self.legal_actions = []
 
-            for action_index in range(self.num_of_sampled_actions): # [20]
+            for action_index in range(self.num_of_sampled_actions):
                 self.children[Action(sampled_actions[action_index].detach().cpu().numpy())] = Node(
                     log_prob[action_index],
                     action_space_size=self.action_space_size,
@@ -631,7 +631,7 @@ def compute_ucb_score(
         value_score = 0
     if value_score > 1:
         value_score = 1
-
+    
     ucb_score = prior_score + value_score
 
     return ucb_score

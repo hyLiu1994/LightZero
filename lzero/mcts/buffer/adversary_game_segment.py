@@ -313,8 +313,8 @@ class AdversaryGameSegment(GameSegment):
             for true_observation in init_true_observations:
                 self.obs_true_segment.append(copy.deepcopy(true_observation))
         else:
-            self.obs_true_segment = self.obs_segment.copy()
-
+            # self.obs_true_segment = self.obs_segment.copy()
+            self.obs_true_segment = copy.deepcopy(self.obs_segment)
 
 
     def is_full(self) -> bool:
