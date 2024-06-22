@@ -8,8 +8,8 @@ if env_id == '13Bus':
     action_space_size = 6
     observation_shape = 48
 elif env_id == '34Bus':
-    action_space_size = 8
-    observation_shape = 111
+    action_space_size = 10
+    observation_shape = 107
 
 ignore_done = False
 
