@@ -1,0 +1,2 @@
+python mujoco_hopper_robustzero_MainExp_config.py
+python mujoco_hopper_robustzero_MainExp_config.py

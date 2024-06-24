@@ -1,4 +1,6 @@
 from easydict import EasyDict
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # options={'Hopper-v3', 'HalfCheetah-v3', 'Walker2d-v3', 'Ant-v3', 'Humanoid-v3'}
 env_id = 'Hopper-v3'
@@ -30,9 +32,9 @@ collector_env_num = 8
 evaluator_env_num = 3
 continuous_action_space = True
 K = 20  # num_of_sampled_actions
-num_simulations = 50
+num_simulations = 200
 update_per_collect = 200
-batch_size = 256
+batch_size = 128
 
 max_env_step = int(5e6)
 reanalyze_ratio = 0.
@@ -42,9 +44,9 @@ eval_freq = 50
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
-mujoco_sampled_efficientzero_config = dict(
+mujoco_robustzero_config = dict(
     exp_name=
-    f'data_sez_ctree/{env_id[:-3]}_RobustZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}_AdversaryPPO',
+    f'data_sez_ctree/ExploreKandNS_{env_id[:-3]}_RobustZero_K_{K}_ns_{num_simulations}_upc{update_per_collect}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -69,7 +71,13 @@ mujoco_sampled_efficientzero_config = dict(
             res_connection_in_dynamics=True,
         ),
         cuda=True,
-        c3=1,
+        # RobustZero hyperparamter ------
+        c3=2,
+        c4=1,
+        robustzero_w1 = -1,
+        optim_type='AdamAd',
+        robustzero_lambda = 0.015,
+        # -------------------------------
         policy_entropy_loss_weight=policy_entropy_loss_weight,
         ignore_done=ignore_done,
         env_type='not_board_games',
@@ -77,10 +85,8 @@ mujoco_sampled_efficientzero_config = dict(
         update_per_collect=update_per_collect,
         batch_size=batch_size,
         discount_factor=0.997,
-        optim_type='AdamAd',
         lr_piecewise_constant_decay=False,
         learning_rate=0.003,
-        adversary_weight_decay=1e-4,
         grad_clip_value=0.5,
         num_simulations=num_simulations,
         reanalyze_ratio=reanalyze_ratio,
@@ -150,18 +156,18 @@ mujoco_sampled_efficientzero_config = dict(
 
 )
 
-mujoco_sampled_efficientzero_config = EasyDict(mujoco_sampled_efficientzero_config)
-main_config = mujoco_sampled_efficientzero_config
+mujoco_robustzero_config = EasyDict(mujoco_robustzero_config)
+main_config = mujoco_robustzero_config
 
-mujoco_sampled_efficientzero_create_config = dict(
+mujoco_robustzero_create_config = dict(
     env=dict(
         type='mujoco_lightzero',
         import_names=['zoo.mujoco.envs.mujoco_lightzero_env'],
     ),
     env_manager=dict(type='subprocess'),
     policy=dict(
-        type='sampled_two_adversary_efficientzero',
-        import_names=['lzero.policy.sampled_two_adversary_efficientzero'],
+        type='robustzero',
+        import_names=['lzero.policy.robustzero'],
         learner=dict(
             train_iterations=int(1e4),
             dataloader=dict(num_workers=0, ),
@@ -176,11 +182,11 @@ mujoco_sampled_efficientzero_create_config = dict(
     ),
     policy_adversary=dict(type='ppo'),
 )
-mujoco_sampled_efficientzero_create_config = EasyDict(mujoco_sampled_efficientzero_create_config)
-create_config = mujoco_sampled_efficientzero_create_config
+mujoco_robustzero_create_config = EasyDict(mujoco_robustzero_create_config)
+create_config = mujoco_robustzero_create_config
 
 if __name__ == "__main__":
-    from lzero.entry import train_muzero_with_two_adversary
-    train_muzero_with_two_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
+    from lzero.entry import train_robustzero
+    train_robustzero([main_config, create_config], seed=seed, max_env_step=max_env_step)
 
 

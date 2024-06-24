@@ -116,7 +116,7 @@ class Adam(Optimizer):
     """
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
-                 weight_decay=0, adversary_weight_decay = 0, amsgrad=False, *, foreach: Optional[bool] = None,
+                 weight_decay=0, lambda_t = 0, amsgrad=False, *, foreach: Optional[bool] = None,
                  maximize: bool = False, capturable: bool = False,
                  differentiable: bool = False, fused: bool = False):
         if not 0.0 <= lr:
@@ -130,7 +130,7 @@ class Adam(Optimizer):
         if not 0.0 <= weight_decay:
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
         defaults = dict(lr=lr, betas=betas, eps=eps,
-                        weight_decay=weight_decay, adversary_weight_decay = adversary_weight_decay, amsgrad=amsgrad,
+                        weight_decay=weight_decay, lambda_t = lambda_t, amsgrad=amsgrad,
                         maximize=maximize, foreach=foreach, capturable=capturable,
                         differentiable=differentiable, fused=fused)
         super(Adam, self).__init__(params, defaults)
@@ -165,7 +165,7 @@ class Adam(Optimizer):
                 s['step'] = torch.tensor(float(s['step']))
 
     @_use_grad_for_differentiable
-    def step(self, closure=None, *, grad_scaler=None):
+    def step(self, w2, closure=None, *, grad_scaler=None):
         """Performs a single optimization step.
 
         Args:
@@ -181,7 +181,16 @@ class Adam(Optimizer):
             with torch.enable_grad():
                 loss = closure()
 
-        for group in self.param_groups:
+        sum_p = 0
+        sum_gradient = 0
+        for idx, group in enumerate(self.param_groups):
+            for p in group['params']:
+                if p.grad is not None:
+                    sum_p += torch.mean((p) ** 2)
+                    sum_gradient += torch.mean((p.grad) ** 2)
+        w2 = 0.1 * w2 + 0.9 * group['lambda_t'] * torch.sqrt(sum_gradient) / torch.sqrt(sum_p)
+                    
+        for idx, group in enumerate(self.param_groups):
             params_with_grad = []
             grads = []
             exp_avgs = []
@@ -240,8 +249,7 @@ class Adam(Optimizer):
                  beta1=beta1,
                  beta2=beta2,
                  lr=group['lr'],
-                 weight_decay=group['weight_decay'],
-                 adversary_weight_decay = group['adversary_weight_decay'],
+                 weight_decay=w2,
                  eps=group['eps'],
                  maximize=group['maximize'],
                  foreach=group['foreach'],
@@ -251,7 +259,7 @@ class Adam(Optimizer):
                  grad_scale=grad_scale,
                  found_inf=found_inf)
 
-        return loss
+        return loss, w2
 
 
 def adam(params: List[Tensor],
@@ -274,7 +282,6 @@ def adam(params: List[Tensor],
          beta2: float,
          lr: float,
          weight_decay: float,
-         adversary_weight_decay: float,
          eps: float,
          maximize: bool):
     r"""Functional API that performs Adam algorithm computation.
@@ -309,14 +316,12 @@ def adam(params: List[Tensor],
          beta2=beta2,
          lr=lr,
          weight_decay=weight_decay,
-         lambda_t=adversary_weight_decay,
          eps=eps,
          maximize=maximize,
          capturable=capturable,
          differentiable=differentiable,
          grad_scale=grad_scale,
          found_inf=found_inf)
-
 
 def _single_tensor_adam(params: List[Tensor],
                         grads: List[Tensor],
@@ -332,7 +337,6 @@ def _single_tensor_adam(params: List[Tensor],
                         beta2: float,
                         lr: float,
                         weight_decay: float,
-                        lambda_t:float,
                         eps: float,
                         maximize: bool,
                         capturable: bool,
@@ -355,9 +359,6 @@ def _single_tensor_adam(params: List[Tensor],
 
         if weight_decay != 0:
             grad = grad.add(param, alpha=weight_decay)
-
-        if lambda_t != 0:
-            grad = grad.add(torch.abs(param), alpha=lambda_t)
 
         if torch.is_complex(param):
             grad = torch.view_as_real(grad)
@@ -432,7 +433,6 @@ def _multi_tensor_adam(params: List[Tensor],
                        beta2: float,
                        lr: float,
                        weight_decay: float,
-                       lambda_t:float,
                        eps: float,
                        maximize: bool,
                        capturable: bool,
@@ -461,9 +461,6 @@ def _multi_tensor_adam(params: List[Tensor],
 
     if weight_decay != 0:
         torch._foreach_add_(grads, params, alpha=weight_decay)
-
-    if lambda_t != 0:
-        torch._foreach_add_(grads, torch.abs(grads), alpha=lambda_t)
 
     # Decay the first and second moment running average coefficient
     torch._foreach_mul_(exp_avgs, beta1)

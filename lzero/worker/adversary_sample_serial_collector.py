@@ -194,7 +194,7 @@ class AdversarySampleSerialCollector(ISerialCollector):
         Return:
             - envstep (:obj:`int`): the total envstep count
         """
-        return self._total_envstep_count
+        return int(self._total_envstep_count)
 
     def close(self) -> None:
         """
