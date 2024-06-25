@@ -19,14 +19,14 @@ ignore_done = False
 # begin of the most frequently changed config specified by the user
 # ==============================================================
 seed = 0
-n_episode = 8
-collector_env_num = 8 # 不要变动,若要变动, 只能往小值变小.
-evaluator_env_num = 3
+n_episode = 3
+collector_env_num = 3 # 不要变动,若要变动, 只能往小值变小.
+evaluator_env_num = 1
 continuous_action_space = True
 K = 20  # num_of_sampled_actions
 num_simulations = 50
 update_per_collect = 200
-batch_size = 256
+batch_size = 128
 eval_freq = 50
 
 max_env_step = int(5e6)
@@ -64,6 +64,13 @@ powergym_sampled_efficientzero_config = dict(
             res_connection_in_dynamics=True,
         ),
         cuda=True,
+        # RobustZero hyperparamter ------
+        c3=0.5,
+        c4=1,
+        robustzero_w1=-1,
+        optim_type='AdamAd',
+        robustzero_lambda=0.0015,
+        # -------------------------------
         policy_entropy_loss_weight=policy_entropy_loss_weight,
         ignore_done=ignore_done,
         env_type='not_board_games',
@@ -71,9 +78,6 @@ powergym_sampled_efficientzero_config = dict(
         update_per_collect=update_per_collect,
         batch_size=batch_size,
         discount_factor=0.997,
-        optim_type='AdamAd',
-        c3=1,
-        adversary_weight_decay=1e-4,
         lr_piecewise_constant_decay=False,
         learning_rate=0.003,
         grad_clip_value=0.5,
@@ -89,8 +93,8 @@ powergym_sampled_efficientzero_config = dict(
     policy_adversary=dict(
         cuda=True,
         recompute_adv=True,
-        Epsilon=0.0075,
         action_space='continuous',
+        Epsilon=0.0075,
         noise_policy='ppo',
         model=dict(
             obs_shape=observation_shape,

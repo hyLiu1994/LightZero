@@ -93,8 +93,8 @@ f'data_sez_ctree/{env_id[:-3]}_Muzero_ns{num_simulations}_upc{update_per_collect
     policy_adversary=dict(
         cuda=True,
         recompute_adv=True,
-        Epsilon=0.0075,
         action_space='continuous',
+        Epsilon=0.0075,
         noise_policy='ppo',
         model=dict(
             obs_shape=observation_shape,

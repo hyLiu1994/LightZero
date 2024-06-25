@@ -1,6 +1,7 @@
 from easydict import EasyDict
 import zoo.powergym.env_manager.power_gym_subprocess_env_manager
-
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # options={'13Bus', '34Bus', '123Bus', '8500-Node'}
 env_id = '13Bus'
 
@@ -86,8 +87,8 @@ f'data_sez_ctree/{env_id}_PPO_with_ppo_adversary_ns{num_simulations}_upc{update_
     policy_adversary=dict(
         cuda=True,
         recompute_adv=True,
-        Epsilon=0.0075,
         action_space='continuous',
+        Epsilon=0.0075,
         noise_policy='ppo',
         model=dict(
             obs_shape=observation_shape,

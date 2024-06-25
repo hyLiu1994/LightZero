@@ -163,7 +163,6 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         policy_entropy_loss_weight=0,
         # (float) The weight of ssl (self-supervised learning) loss.
         ssl_loss_weight=2,
-        ssl_adversary_loss_weight=2,
         # (bool) Whether to use the cosine learning rate decay.
         cos_lr_scheduler=False,
         # (bool) Whether to use piecewise constant learning rate decay.
@@ -462,7 +461,7 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
                 # ==============================================================
                 # calculate consistency loss for the next ``num_unroll_steps`` unroll steps.
                 # ==============================================================
-                if self._cfg.ssl_adversary_loss_weight > 0:
+                if self._cfg.c3 > 0:
                     # obtain the oracle latent states from representation function.
                     obs = to_tensor(obs_batch)
                     true_obs = to_tensor(true_obs_batch)

@@ -1,6 +1,7 @@
 from easydict import EasyDict
 import zoo.powergym.env_manager.power_gym_subprocess_env_manager
-
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # options={'13Bus', '34Bus', '123Bus', '8500-Node'}
 env_id = '13Bus'
 
@@ -17,9 +18,9 @@ ignore_done = False
 # begin of the most frequently changed config specified by the user
 # ==============================================================
 seed = 0
-n_episode = 8
-collector_env_num = 8 # 不要变动,若要变动, 只能往小值变小.
-evaluator_env_num = 3
+n_episode = 3
+collector_env_num = 3 # 不要变动,若要变动, 只能往小值变小.
+evaluator_env_num = 1
 continuous_action_space = True
 K = 20  # num_of_sampled_actions
 num_simulations = 50
@@ -85,8 +86,8 @@ f'data_sez_ctree/{env_id}_MuZero_with_Random_adversary_ns{num_simulations}_upc{u
     policy_adversary=dict(
         cuda=True,
         recompute_adv=True,
-        Epsilon=0.0075,
         action_space='continuous',
+        Epsilon=0.0075,
         noise_policy='ppo',
         model=dict(
             obs_shape=observation_shape,
