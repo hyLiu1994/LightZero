@@ -37,7 +37,7 @@ policy_entropy_loss_weight = 0.005
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
-powergym_sampled_efficientzero_config = dict(
+powergym_robustzero_config = dict(
     exp_name=
     f'data_sez_ctree/IEEE13_{env_id}_RobustZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
@@ -149,10 +149,10 @@ powergym_sampled_efficientzero_config = dict(
 
 )
 
-powergym_sampled_efficientzero_config = EasyDict(powergym_sampled_efficientzero_config)
-main_config = powergym_sampled_efficientzero_config
+powergym_robustzero_config = EasyDict(powergym_robustzero_config)
+main_config = powergym_robustzero_config
 
-powergym_sampled_efficientzero_create_config = dict(
+powergym_robustzero_create_config = dict(
     env=dict(
         type='powergym_lightzero',
         import_names=['zoo.powergym.envs.powergym_lightzero_env'],
@@ -175,8 +175,8 @@ powergym_sampled_efficientzero_create_config = dict(
     ),
     policy_adversary=dict(type='ppo'),
 )
-powergym_sampled_efficientzero_create_config = EasyDict(powergym_sampled_efficientzero_create_config)
-create_config = powergym_sampled_efficientzero_create_config
+powergym_robustzero_create_config = EasyDict(powergym_robustzero_create_config)
+create_config = powergym_robustzero_create_config
 
 if __name__ == "__main__":
     from lzero.entry import train_muzero_with_two_adversary
