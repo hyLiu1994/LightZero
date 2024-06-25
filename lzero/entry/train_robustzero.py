@@ -25,7 +25,7 @@ from .utils import random_collect
 
 
 
-def train_muzero_with_two_adversary(
+def train_robustzero(
         input_cfg: Tuple[dict, dict],
         seed: int = 0,
         model: Optional[torch.nn.Module] = None,
@@ -53,8 +53,8 @@ def train_muzero_with_two_adversary(
     cfg, create_cfg = input_cfg
     assert create_cfg.policy.type in ['efficientzero', 'muzero',  'gumbel_muzero', 'stochastic_muzero',
                                       'sampled_efficientzero', 'sampled_adversary_efficientzero',
-                                      'sampled_two_adversary_efficientzero'], \
-        "train_muzero entry now only support the following algo.: 'efficientzero', 'muzero', 'gumbel_muzero', 'sampled_efficientzero', 'sampled_adversary_efficientzero', 'sampled_two_adversary_efficientzero' "
+                                      'robustzero'], \
+        "train_muzero entry now only support the following algo.: 'efficientzero', 'muzero', 'gumbel_muzero', 'sampled_efficientzero', 'sampled_adversary_efficientzero', 'robustzero' "
 
     if create_cfg.policy.type == 'muzero':
         from lzero.mcts import MuZeroGameBuffer as GameBuffer
@@ -64,7 +64,7 @@ def train_muzero_with_two_adversary(
         from lzero.mcts import SampledEfficientZeroGameBuffer as GameBuffer
     elif create_cfg.policy.type == 'sampled_adversary_efficientzero':
         from lzero.mcts import AdversarySampledEfficientZeroGameBuffer as GameBuffer
-    elif create_cfg.policy.type == 'sampled_two_adversary_efficientzero':
+    elif create_cfg.policy.type == 'robustzero':
         from lzero.mcts import AdversarySampledEfficientZeroGameBuffer as GameBuffer
     elif create_cfg.policy.type == 'gumbel_muzero':
         from lzero.mcts import GumbelMuZeroGameBuffer as GameBuffer

@@ -96,7 +96,7 @@ class Optimizer(object):
 
     # Currently needed by Adam and AdamW
     def _cuda_graph_capture_health_check(self):
-        if torch.has_cuda and torch.cuda.is_available():
+        if torch.backends.cuda.is_built() and torch.cuda.is_available():
             capturing = torch.cuda.is_current_stream_capturing()
 
             if capturing and not self.defaults['capturable']:

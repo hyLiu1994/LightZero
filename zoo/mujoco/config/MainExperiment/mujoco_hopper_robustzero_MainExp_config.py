@@ -1,43 +1,52 @@
 from easydict import EasyDict
-import zoo.powergym.env_manager.power_gym_subprocess_env_manager
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-# options={'13Bus', '34Bus', '123Bus', '8500-Node'}
-env_id = '13Bus'
+# options={'Hopper-v3', 'HalfCheetah-v3', 'Walker2d-v3', 'Ant-v3', 'Humanoid-v3'}
+env_id = 'Hopper-v3'
 
-if env_id == '13Bus':
+if env_id == 'Hopper-v3':
+    action_space_size = 3
+    observation_shape = 11
+elif env_id in ['HalfCheetah-v3', 'Walker2d-v3']:
     action_space_size = 6
-    observation_shape = 48
-elif env_id == '34Bus':
-    action_space_size = 10
-    observation_shape = 107
+    observation_shape = 17
+elif env_id == 'Ant-v3':
+    action_space_size = 8
+    observation_shape = 111
+elif env_id == 'Humanoid-v3':
+    action_space_size = 17
+    observation_shape = 376
 
 ignore_done = False
+if env_id == 'HalfCheetah-v3':
+    # for halfcheetah, we ignore done signal to predict the Q value of the last step correctly.
+    ignore_done = True
 
 # ==============================================================
 # begin of the most frequently changed config specified by the user
 # ==============================================================
 seed = 0
 n_episode = 8
-collector_env_num = 8 # 不要变动,若要变动, 只能往小值变小.
+collector_env_num = 8
 evaluator_env_num = 3
 continuous_action_space = True
 K = 20  # num_of_sampled_actions
 num_simulations = 50
 update_per_collect = 200
-batch_size = 256
-eval_freq = 50
+batch_size = 128
 
 max_env_step = int(5e6)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
-
+eval_freq = 50
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
-powergym_sampled_efficientzero_config = dict(
+mujoco_robustzero_config = dict(
     exp_name=
-    f'data_sez_ctree/{env_id}_RobustZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}_AdversaryPPO',
+    f'data_sez_ctree/MainExperiment_{env_id[:-3]}_RobustZero_ns_{num_simulations}_upc{update_per_collect}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -62,6 +71,13 @@ powergym_sampled_efficientzero_config = dict(
             res_connection_in_dynamics=True,
         ),
         cuda=True,
+        # RobustZero hyperparamter ------
+        c3=0.5,
+        c4=1,
+        robustzero_w1 = -1,
+        optim_type='AdamAd',
+        robustzero_lambda = 0.0015,
+        # -------------------------------
         policy_entropy_loss_weight=policy_entropy_loss_weight,
         ignore_done=ignore_done,
         env_type='not_board_games',
@@ -69,16 +85,13 @@ powergym_sampled_efficientzero_config = dict(
         update_per_collect=update_per_collect,
         batch_size=batch_size,
         discount_factor=0.997,
-        optim_type='AdamAd',
-        c3=1,
-        adversary_weight_decay=1e-4,
         lr_piecewise_constant_decay=False,
         learning_rate=0.003,
         grad_clip_value=0.5,
         num_simulations=num_simulations,
         reanalyze_ratio=reanalyze_ratio,
         n_episode=n_episode,
-        eval_freq=int(eval_freq),
+        eval_freq=eval_freq,
         replay_buffer_size=int(1e6),
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
@@ -87,9 +100,9 @@ powergym_sampled_efficientzero_config = dict(
     policy_adversary=dict(
         cuda=True,
         recompute_adv=True,
-        Epsilon=0.0075,
+        Epsilon = 0.0075,
         action_space='continuous',
-        noise_policy='ppo',
+        noise_policy = 'ppo',
         model=dict(
             obs_shape=observation_shape,
             action_shape=observation_shape,
@@ -98,7 +111,7 @@ powergym_sampled_efficientzero_config = dict(
         learn=dict(
             epoch_per_collect=1,
             update_per_collect=1,
-            batch_size=batch_size,
+            batch_size=int(batch_size/4),
             learning_rate=3e-4,
             value_weight=0.5,
             entropy_weight=0.001,
@@ -143,18 +156,18 @@ powergym_sampled_efficientzero_config = dict(
 
 )
 
-powergym_sampled_efficientzero_config = EasyDict(powergym_sampled_efficientzero_config)
-main_config = powergym_sampled_efficientzero_config
+mujoco_robustzero_config = EasyDict(mujoco_robustzero_config)
+main_config = mujoco_robustzero_config
 
-powergym_sampled_efficientzero_create_config = dict(
+mujoco_robustzero_create_config = dict(
     env=dict(
-        type='powergym_lightzero',
-        import_names=['zoo.powergym.envs.powergym_lightzero_env'],
+        type='mujoco_lightzero',
+        import_names=['zoo.mujoco.envs.mujoco_lightzero_env'],
     ),
-    env_manager=dict(type='power_gym_subprocess'),
+    env_manager=dict(type='subprocess'),
     policy=dict(
-        type='sampled_two_adversary_efficientzero',
-        import_names=['lzero.policy.sampled_two_adversary_efficientzero'],
+        type='robustzero',
+        import_names=['lzero.policy.robustzero'],
         learner=dict(
             train_iterations=int(1e4),
             dataloader=dict(num_workers=0, ),
@@ -169,11 +182,11 @@ powergym_sampled_efficientzero_create_config = dict(
     ),
     policy_adversary=dict(type='ppo'),
 )
-powergym_sampled_efficientzero_create_config = EasyDict(powergym_sampled_efficientzero_create_config)
-create_config = powergym_sampled_efficientzero_create_config
+mujoco_robustzero_create_config = EasyDict(mujoco_robustzero_create_config)
+create_config = mujoco_robustzero_create_config
 
 if __name__ == "__main__":
-    from lzero.entry import train_muzero_with_two_adversary
-    train_muzero_with_two_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
+    from lzero.entry import train_robustzero
+    train_robustzero([main_config, create_config], seed=seed, max_env_step=max_env_step)
 
 

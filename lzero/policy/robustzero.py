@@ -21,7 +21,7 @@ from lzero.policy import scalar_transform, InverseScalarTransform, cross_entropy
 from lzero.policy.muzero import MuZeroPolicy
 
 
-@POLICY_REGISTRY.register('sampled_two_adversary_efficientzero')
+@POLICY_REGISTRY.register('robustzero')
 class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
     """
     Overview:
@@ -164,7 +164,6 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         # (float) The weight of ssl (self-supervised learning) loss.
         ssl_loss_weight=2,
         ssl_adversary_loss_weight=2,
-        c3 = 2,
         # (bool) Whether to use the cosine learning rate decay.
         cos_lr_scheduler=False,
         # (bool) Whether to use piecewise constant learning rate decay.
@@ -269,7 +268,10 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
             )
         elif self._cfg.optim_type == 'AdamAd':
             self._optimizer = adversary_adam.Adam(
-                self._model.parameters(), lr=self._cfg.learning_rate, weight_decay=self._cfg.weight_decay, adversary_weight_decay=self._cfg.adversary_weight_decay
+                self._model.parameters(),
+                lr=self._cfg.learning_rate, 
+                weight_decay=self._cfg.weight_decay, 
+                lambda_t=self._cfg.robustzero_lambda,
             )
         elif self._cfg.optim_type == 'AdamW':
             self._optimizer = configure_optimizers(
@@ -530,7 +532,7 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         # ==============================================================
         # weighted loss with masks (some invalid states which are out of trajectory.)
         loss = (
-                self._cfg.ssl_adversary_loss_weight * consistency_loss + self._cfg.policy_loss_weight * policy_loss +
+                self._cfg.c3 * consistency_loss + self._cfg.policy_loss_weight * policy_loss +
                 self._cfg.value_loss_weight * value_loss + self._cfg.reward_loss_weight * value_prefix_loss +
                 self._cfg.policy_entropy_loss_weight * policy_entropy_loss
         )
@@ -616,7 +618,15 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         return_data_random = self._forward_learn_before(data[1])
         ppo_sim_cl_loss = return_data_ppo['sim_cl_loss']
         random_sim_cl_loss = return_data_random['sim_cl_loss']
-        w1 = 1./(1.+ torch.exp(self._cfg.c3 * (ppo_sim_cl_loss + 1.)))
+        if (self._cfg.robustzero_w1 == -1):
+            if hasattr(self, 'previous_w1'):
+                w1 = 0.9/(1.+ torch.exp(self._cfg.c4 * (ppo_sim_cl_loss + 1.))) + 0.1 * self.previous_w1
+            else: 
+                w1 = 1./(1.+ torch.exp(self._cfg.c4 * (ppo_sim_cl_loss + 1.)))
+            self.previous_w1 = w1
+        else:
+            w1 = torch.tensor(self._cfg.robustzero_w1)
+
         weighted_total_loss = (return_data_ppo['loss'] + w1.detach() * return_data_random['loss']).mean()
 
         gradient_scale = 1 / self._cfg.num_unroll_steps
@@ -628,7 +638,14 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         total_grad_norm_before_clip = torch.nn.utils.clip_grad_norm_(
             self._learn_model.parameters(), self._cfg.grad_clip_value
         )
-        self._optimizer.step()
+        if self._cfg.optim_type == 'AdamAd':
+            if hasattr(self, 'previous_w2'):
+                _ , self.previous_w2 = self._optimizer.step(self.previous_w2)
+            else:
+                _ , self.previous_w2 = self._optimizer.step(0)
+        else:
+            self._optimizer.step()
+
         if self._cfg.cos_lr_scheduler or self._cfg.lr_piecewise_constant_decay:
             self.lr_scheduler.step()
 
