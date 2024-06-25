@@ -10,10 +10,9 @@ from ding.utils import build_logger, EasyTimer, SERIAL_COLLECTOR_REGISTRY, one_t
     broadcast_object_list, allreduce_data
 from ding.torch_utils import to_tensor, to_ndarray
 from ding.worker.collector.base_serial_collector import ISerialCollector, CachePool, TrajBuffer, INF, to_tensor_transitions
-from lzero.mcts.utils import prepare_observation
 
 
-class AdversarySampleSerialCollector(ISerialCollector):
+class PPOSampleSerialCollector(ISerialCollector):
     """
     Overview:
         Sample collector(n_sample), a sample is one training sample for updating model,
@@ -32,12 +31,11 @@ class AdversarySampleSerialCollector(ISerialCollector):
             cfg: EasyDict,
             env: BaseEnvManager = None,
             policy: namedtuple = None,
-            policy_agent: namedtuple = None,
-            policy_config: 'policy_config' = None,  # noqa
-            policy_agent_config: 'policy_config' = None,  # noqa
+            policy_adversary: namedtuple = None,
+            policy_adversary_config: 'policy_config' = None,  # noqa
             tb_logger: 'SummaryWriter' = None,  # noqa
             exp_name: Optional[str] = 'default_experiment',
-            instance_name: Optional[str] = 'collector'
+            instance_name: Optional[str] = 'collector',
     ) -> None:
         """
         Overview:
@@ -58,9 +56,6 @@ class AdversarySampleSerialCollector(ISerialCollector):
         self._end_flag = False
         self._rank = get_rank()
         self._world_size = get_world_size()
-        self._policy_agent = policy_agent
-        self._epsilon = policy_config.Epsilon
-        self.policy_agent_config = policy_agent_config
 
         if self._rank == 0:
             if tb_logger is not None:
@@ -80,7 +75,11 @@ class AdversarySampleSerialCollector(ISerialCollector):
             )
             self._tb_logger = None
 
-        self.reset(policy, policy_agent, env)
+        if policy_adversary_config is not None:
+            self._epsilon = policy_adversary_config.Epsilon
+            self._noise_policy = policy_adversary_config.noise_policy
+
+        self.reset(policy,policy_adversary, env)
 
     def reset_env(self, _env: Optional[BaseEnvManager] = None) -> None:
         """
@@ -100,7 +99,7 @@ class AdversarySampleSerialCollector(ISerialCollector):
         else:
             self._env.reset()
 
-    def reset_policy(self, _policy: Optional[namedtuple] = None, _policy_agent: Optional[namedtuple] = None) -> None:
+    def reset_policy(self, _policy: Optional[namedtuple] = None, _policy_adversary: Optional[namedtuple] = None) -> None:
         """
         Overview:
             Reset the policy.
@@ -129,10 +128,12 @@ class AdversarySampleSerialCollector(ISerialCollector):
                 )
             else:
                 self._traj_len = INF
-        self._policy_agent.reset()
         self._policy.reset()
+        if _policy_adversary is not None:
+            self._policy_adversary = _policy_adversary
+            self._policy_adversary.reset()
 
-    def reset(self, _policy: Optional[namedtuple] = None, _policy_agent: Optional[namedtuple] = None, _env: Optional[BaseEnvManager] = None) -> None:
+    def reset(self, _policy: Optional[namedtuple] = None, _policy_adversary: Optional[namedtuple] = None, _env: Optional[BaseEnvManager] = None) -> None:
         """
         Overview:
             Reset the environment and policy.
@@ -149,7 +150,7 @@ class AdversarySampleSerialCollector(ISerialCollector):
         if _env is not None:
             self.reset_env(_env)
         if _policy is not None:
-            self.reset_policy(_policy, _policy_agent)
+            self.reset_policy(_policy, _policy_adversary)
 
         if self._policy_cfg.type == 'dreamer_command':
             self._states = None
@@ -264,46 +265,40 @@ class AdversarySampleSerialCollector(ISerialCollector):
                 # Get current env obs.
                 obs = self._env.ready_obs
                 stack_obs = {env_id: obs[env_id]['observation'] for env_id in obs.keys()}
+                ######### add adversary ############################
+                if hasattr(self, '_noise_policy'):
+                    if self._noise_policy == 'ppo':
+                        noise = self._policy_adversary.forward(stack_obs)
+                        for env_id in obs.keys():
+                            noise[env_id]['action'] = torch.clamp(noise[env_id]['action'], -1 * self._epsilon,
+                                                                  self._epsilon)
+                            stack_obs[env_id] = stack_obs[env_id] + noise[env_id]['action'].numpy()
+                    elif self._noise_policy == 'random':
+                        for env_id in obs.keys():
+                            noise = np.random.normal(0, 0.001, len(obs[env_id]['observation']))
+                            noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon)
+                            stack_obs[env_id] = stack_obs[env_id] + noise.numpy()
                 # Policy forward.
                 self._obs_pool.update(stack_obs)
                 if self._transform_obs:
                     stack_obs = to_tensor(stack_obs, dtype=torch.float32)
-                if self._policy_cfg.type == 'dreamer_command' and not random_collect: # ppo_command
+                if self._policy_cfg.type == 'dreamer_command' and not random_collect:
                     policy_output = self._policy.forward(stack_obs, **policy_kwargs, reset=self._resets, state=self._states)
                     #self._states = {env_id: output['state'] for env_id, output in policy_output.items()}
                     self._states = [output['state'] for output in policy_output.values()]
                 else:
                     policy_output = self._policy.forward(stack_obs, **policy_kwargs)
-                    # if len(policy_output) < 8:
-                    #     print(policy_output)
-                    #     print("stack_obs", stack_obs)
                 self._policy_output_pool.update(policy_output)
-
-                # Add noise for obs
-                noises_action = {env_id: output['action'] for env_id, output in policy_output.items()}
-                noises_action = to_ndarray(noises_action)
-                noises_action = {i: torch.clamp(torch.tensor(a), -1 * self._epsilon, self._epsilon) for i, a in noises_action.items()}
-                stack_obs = {env_id: stack_obs[env_id] + noises_action[env_id].numpy() for env_id in stack_obs.keys()}
-                stack_obs = list(stack_obs.values())
-                action_mask = [obs[env_id]['action_mask'] for env_id in obs.keys()]
-                to_play = [obs[env_id]['to_play'] for env_id in obs.keys()]
-                stack_obs = to_ndarray(stack_obs)
-                stack_obs = prepare_observation(stack_obs, self.policy_agent_config.model.model_type)
-                stack_obs = torch.from_numpy(stack_obs).to(self.policy_agent_config.device).float()
-
                 # Interact with env.
-                policy_agent_output = self._policy_agent.forward(stack_obs, action_mask, to_play)
-                actions = {i: a['action'] for i, a in policy_agent_output.items()}
+                actions = {env_id: output['action'] for env_id, output in policy_output.items()}
                 actions = to_ndarray(actions)
                 timesteps = self._env.step(actions)
-    
+
             # TODO(nyz) this duration may be inaccurate in async env
             interaction_duration = self._timer.value / len(timesteps)
 
             # TODO(nyz) vectorize this for loop
             for env_id, timestep in timesteps.items():
-                if (self._policy_output_pool[env_id] == None):
-                    continue
                 with self._timer:
                     if timestep.info.get('abnormal', False):
                         # If there is an abnormal timestep, reset all the related variables(including this env).
@@ -319,30 +314,19 @@ class AdversarySampleSerialCollector(ISerialCollector):
                         transition = self._policy.process_transition(
                             self._obs_pool[env_id], self._policy_output_pool[env_id], timestep, env_id
                         )
-                    else:  #ppo_command
-                        try:
-                            transition = self._policy.process_transition(
-                                self._obs_pool[env_id], self._policy_output_pool[env_id], timestep
-                            )
-                            if level_seeds is not None:
-                                transition['seed'] = level_seeds[env_id]
-                        # 比如：1 / 0
-                        except Exception as e:
-                            print("policy_agent_output", policy_agent_output)
-                            print("timestep", timestep)
-                            # 捕获异常并打印信息
-                            print("An exception occurred: env_id _obs_pool _policy_output_pool, policy_output",
-                                  e, env_id, self._obs_pool, self._policy_output_pool, policy_output)
-                            # 再次抛出异常
-                            raise
-
+                    else:
+                        transition = self._policy.process_transition(
+                            self._obs_pool[env_id], self._policy_output_pool[env_id], timestep
+                        )
+                        if level_seeds is not None:
+                            transition['seed'] = level_seeds[env_id]
                     # ``train_iter`` passed in from ``serial_entry``, indicates current collecting model's iteration.
                     transition['collect_iter'] = train_iter
                     self._traj_buffer[env_id].append(transition)
                     self._env_info[env_id]['step'] += 1
                     collected_step += 1
                     # prepare data
-                    if timestep.done or len(self._traj_buffer[env_id]) == self._traj_len or len(self._traj_buffer[env_id]) + collected_sample > n_sample:
+                    if timestep.done or len(self._traj_buffer[env_id]) == self._traj_len:
                         # If policy is r2d2:
                         # 1. For each collect_env, we want to collect data of length self._traj_len=INF
                         # unless the episode enters the 'done' state.
@@ -356,15 +340,7 @@ class AdversarySampleSerialCollector(ISerialCollector):
                         # Episode is done or traj_buffer(maxlen=traj_len) is full.
                         # indicate whether to shallow copy next obs, i.e., overlap of s_t and s_t+1
                         transitions = to_tensor_transitions(self._traj_buffer[env_id], not self._deepcopy_obs)
-                        # Change env reward for adversary
-                        optimized_transitions = [{
-                            **transition, 
-                            'reward': transition['reward'] * -1, 
-                            'obs': transition['obs']['observation'] if isinstance(transition['obs'], dict) else transition['obs'], 
-                            'next_obs': transition['next_obs']['observation'] if isinstance(transition['next_obs'], dict) else transition['next_obs']
-                        } for transition in transitions]
-
-                        train_sample = self._policy.get_train_sample(optimized_transitions)
+                        train_sample = self._policy.get_train_sample(transitions)
                         return_data.extend(train_sample)
                         self._env_info[env_id]['train_sample'] += len(train_sample)
                         collected_sample += len(train_sample)
@@ -375,7 +351,7 @@ class AdversarySampleSerialCollector(ISerialCollector):
                 # If env is done, record episode info and reset
                 if timestep.done:
                     collected_episode += 1
-                    reward = timestep.info['eval_episode_return'] * (-1)
+                    reward = timestep.info['eval_episode_return']
                     info = {
                         'reward': reward,
                         'time': self._env_info[env_id]['time'],

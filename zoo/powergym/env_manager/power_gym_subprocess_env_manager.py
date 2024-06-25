@@ -515,23 +515,41 @@ class PowerGymAsyncSubprocessEnvManager(BaseEnvManager):
 
         torch.set_num_threads(1)
         env_fn = env_fn_wrapper.data
+        # if env_fn.keywords['cfg']['env_id'] == '13Bus':
+        # if env_fn.keywords['cfg']['env_type'] == 'normal_collector':
+        #     env_fn.keywords['cfg']['work_idx'] = env_id
+        # elif env_fn.keywords['cfg']['env_type'] == 'ppo_collector':
+        #     env_fn.keywords['cfg']['work_idx'] = 10 + env_id
+        # elif env_fn.keywords['cfg']['env_type'] == 'random_collector':
+        #     env_fn.keywords['cfg']['work_idx'] = 20 + env_id
+        # elif env_fn.keywords['cfg']['env_type'] == 'ppo_adversary_collector':
+        #     env_fn.keywords['cfg']['work_idx'] = 30 + env_id
+        # elif env_fn.keywords['cfg']['env_type'] == 'normal_evaluator':
+        #     env_fn.keywords['cfg']['work_idx'] = 40 + env_id
+        # elif env_fn.keywords['cfg']['env_type'] == 'ppo_evaluator':
+        #     env_fn.keywords['cfg']['work_idx'] = 45 + env_id
+        # elif env_fn.keywords['cfg']['env_type'] == 'random_evaluator':
+        #     env_fn.keywords['cfg']['work_idx'] = 50 + env_id
+        # elif env_fn.keywords['cfg']['env_type'] == 'ppo_adversary_evaluator':
+        #     env_fn.keywords['cfg']['work_idx'] = 55 + env_id
+
         if env_fn.keywords['cfg']['env_type'] == 'normal_collector':
             env_fn.keywords['cfg']['work_idx'] = env_id
-            # print('normal_collector:{}',env_id)
         elif env_fn.keywords['cfg']['env_type'] == 'ppo_collector':
-            env_fn.keywords['cfg']['work_idx'] = 10 + env_id
+            env_fn.keywords['cfg']['work_idx'] = 3 + env_id
         elif env_fn.keywords['cfg']['env_type'] == 'random_collector':
-            env_fn.keywords['cfg']['work_idx'] = 20 + env_id
+            env_fn.keywords['cfg']['work_idx'] = 6 + env_id
         elif env_fn.keywords['cfg']['env_type'] == 'ppo_adversary_collector':
-            env_fn.keywords['cfg']['work_idx'] = 30 + env_id
+            env_fn.keywords['cfg']['work_idx'] = 9 + env_id
         elif env_fn.keywords['cfg']['env_type'] == 'normal_evaluator':
-            env_fn.keywords['cfg']['work_idx'] = 40 + env_id
+            env_fn.keywords['cfg']['work_idx'] = 12 + env_id
         elif env_fn.keywords['cfg']['env_type'] == 'ppo_evaluator':
-            env_fn.keywords['cfg']['work_idx'] = 45 + env_id
+            env_fn.keywords['cfg']['work_idx'] = 13 + env_id
         elif env_fn.keywords['cfg']['env_type'] == 'random_evaluator':
-            env_fn.keywords['cfg']['work_idx'] = 50 + env_id
+            env_fn.keywords['cfg']['work_idx'] = 14 + env_id
         elif env_fn.keywords['cfg']['env_type'] == 'ppo_adversary_evaluator':
-            env_fn.keywords['cfg']['work_idx'] = 55 + env_id
+            env_fn.keywords['cfg']['work_idx'] = 15 + env_id
+
 
         env = env_fn()
         parent.close()

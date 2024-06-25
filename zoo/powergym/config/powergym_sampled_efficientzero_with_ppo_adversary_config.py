@@ -35,7 +35,7 @@ policy_entropy_loss_weight = 0.005
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
-mujoco_sampled_efficientzero_config = dict(
+powergym_sampled_efficientzero_config = dict(
     exp_name=
 f'data_sez_ctree/{env_id}_MuZero_with_ppo_adversary_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
@@ -141,10 +141,10 @@ f'data_sez_ctree/{env_id}_MuZero_with_ppo_adversary_ns{num_simulations}_upc{upda
 
 )
 
-mujoco_sampled_efficientzero_config = EasyDict(mujoco_sampled_efficientzero_config)
-main_config = mujoco_sampled_efficientzero_config
+powergym_sampled_efficientzero_config = EasyDict(powergym_sampled_efficientzero_config)
+main_config = powergym_sampled_efficientzero_config
 
-mujoco_sampled_efficientzero_create_config = dict(
+powergym_sampled_efficientzero_create_config = dict(
     env=dict(
         type='powergym_lightzero',
         import_names=['zoo.powergym.envs.powergym_lightzero_env'],
@@ -167,8 +167,8 @@ mujoco_sampled_efficientzero_create_config = dict(
     ),
     policy_adversary=dict(type='ppo'),
 )
-mujoco_sampled_efficientzero_create_config = EasyDict(mujoco_sampled_efficientzero_create_config)
-create_config = mujoco_sampled_efficientzero_create_config
+powergym_sampled_efficientzero_create_config = EasyDict(powergym_sampled_efficientzero_create_config)
+create_config = powergym_sampled_efficientzero_create_config
 
 if __name__ == "__main__":
     from lzero.entry import train_muzero_with_adversary

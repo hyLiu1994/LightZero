@@ -6,3 +6,5 @@ from .muzero_adversary_collector import MuZeroAdversaryCollector
 from .muzero_adversary_evaluator import MuZeroAdversaryEvaluator
 from .interaction_adversary_serial_evaluator import InteractionAdversarySerialEvaluator
 from .adversary_sample_serial_collector import AdversarySampleSerialCollector
+from .ppo_sample_serial_collector import PPOSampleSerialCollector
+from .ppo_interaction_serial_evaluator import PPOInteractionSerialEvaluator

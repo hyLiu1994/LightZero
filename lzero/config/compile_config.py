@@ -18,6 +18,7 @@ def compile_config(
         cfg: EasyDict,
         env_manager: type = None,
         policy: type = None,
+        policy_adversary: type = None,
         learner: type = BaseLearner,
         collector: type = None,
         evaluator: type = InteractionSerialEvaluator,
@@ -141,6 +142,7 @@ def compile_config(
         else:
             world_model_config = world_model.default_config()
             world_model_config.update(create_cfg.world_model)
+
     policy_config.learn.learner = deep_merge_dicts(
         learner.default_config(),
         policy_config.learn.learner,

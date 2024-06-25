@@ -8,10 +8,10 @@ from ding.torch_utils import to_tensor, to_ndarray, to_item
 from ding.utils import build_logger, EasyTimer, SERIAL_EVALUATOR_REGISTRY
 from ding.utils import get_world_size, get_rank, broadcast_object_list
 from ding.worker.collector.base_serial_evaluator import ISerialEvaluator, VectorEvalMonitor
-from lzero.mcts.utils import prepare_observation
 
 
-class InteractionAdversarySerialEvaluator(ISerialEvaluator):
+
+class PPOInteractionSerialEvaluator(ISerialEvaluator):
     """
     Overview:
         Interaction serial evaluator class, policy interacts with env.
@@ -38,9 +38,8 @@ class InteractionAdversarySerialEvaluator(ISerialEvaluator):
             cfg: dict,
             env: BaseEnvManager = None,
             policy: namedtuple = None,
-            policy_agent: namedtuple = None,
-            policy_config: 'policy_config' = None,  # noqa
-            policy_agent_config: 'policy_config' = None,  # noqa
+            policy_adversary: namedtuple = None,
+            policy_adversary_config: 'policy_config' = None,  # noqa
             tb_logger: 'SummaryWriter' = None,  # noqa
             exp_name: Optional[str] = 'default_experiment',
             instance_name: Optional[str] = 'evaluator',
@@ -70,9 +69,10 @@ class InteractionAdversarySerialEvaluator(ISerialEvaluator):
                 )
         else:
             self._logger, self._tb_logger = None, None  # for close elegantly
-        self.policy_agent_config = policy_agent_config
-        self._epsilon = policy_config.Epsilon
-        self.reset(policy, policy_agent, env)
+        self.reset(policy, policy_adversary, env)
+        if policy_adversary_config is not None:
+            self._epsilon = policy_adversary_config.Epsilon
+            self._noise_policy = policy_adversary_config.noise_policy
 
         self._timer = EasyTimer()
         self._default_n_episode = cfg.n_episode
@@ -100,7 +100,7 @@ class InteractionAdversarySerialEvaluator(ISerialEvaluator):
         else:
             self._env.reset()
 
-    def reset_policy(self, _policy: Optional[namedtuple] = None,  _policy_agent: Optional[namedtuple] = None) -> None:
+    def reset_policy(self, _policy: Optional[namedtuple] = None, _policy_adversary: Optional[namedtuple] = None) -> None:
         """
         Overview:
             Reset evaluator's policy. In some case, we need evaluator work in this same environment but use\
@@ -113,13 +113,13 @@ class InteractionAdversarySerialEvaluator(ISerialEvaluator):
         assert hasattr(self, '_env'), "please set env first"
         if _policy is not None:
             self._policy = _policy
-        if _policy_agent is not None:
-            self._policy_agent = _policy_agent
         self._policy_cfg = self._policy.get_attribute('cfg')
-        self._policy_agent.reset()
         self._policy.reset()
+        if _policy_adversary is not None:
+            self._policy_adversary = _policy_adversary
+            self._policy_adversary.reset()
 
-    def reset(self, _policy: Optional[namedtuple] = None, _policy_agent: Optional[namedtuple] = None, _env: Optional[BaseEnvManager] = None) -> None:
+    def reset(self, _policy: Optional[namedtuple] = None,  _policy_adversary: Optional[namedtuple] = None, _env: Optional[BaseEnvManager] = None) -> None:
         """
         Overview:
             Reset evaluator's policy and environment. Use new policy and environment to collect data.
@@ -135,8 +135,8 @@ class InteractionAdversarySerialEvaluator(ISerialEvaluator):
         """
         if _env is not None:
             self.reset_env(_env)
-        if _policy is not None and _policy_agent is not None:
-            self.reset_policy(_policy, _policy_agent)
+        if _policy is not None:
+            self.reset_policy(_policy, _policy_adversary)
         if self._policy_cfg.type == 'dreamer_command':
             self._states = None
             self._resets = np.array([False for i in range(self._env_num)])
@@ -228,15 +228,27 @@ class InteractionAdversarySerialEvaluator(ISerialEvaluator):
             with self._timer:
                 while not eval_monitor.is_finished():
                     obs = self._env.ready_obs
-                    # list [dict{'observation', 'action_mask', 'to_play'}]
-                    obs = to_tensor(obs, dtype=torch.float32)
                     stack_obs = {env_id: obs[env_id]['observation'] for env_id in obs.keys()}
+                    ######### add adversary ############################
+                    if hasattr(self, '_noise_policy'):
+                        if self._noise_policy == 'ppo':
+                            noise = self._policy_adversary.forward(stack_obs)
+                            for env_id in obs.keys():
+                                noise[env_id]['action'] = torch.clamp(noise[env_id]['action'], -1 * self._epsilon,
+                                                                      self._epsilon)
+                                stack_obs[env_id] = stack_obs[env_id] + noise[env_id]['action'].numpy()
+                        elif self._noise_policy == 'random':
+                            for env_id in obs.keys():
+                                noise = np.random.normal(0, 0.001, len(obs[env_id]['observation']))
+                                noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon)
+                                stack_obs[env_id] = stack_obs[env_id] + noise.numpy()
+                    stack_obs = to_tensor(stack_obs, dtype=torch.float32)
 
                     # update videos
                     if render:
-                        eval_monitor.update_video(self._env.ready_imgs) 
+                        eval_monitor.update_video(self._env.ready_imgs)
 
-                    if self._policy_cfg.type == 'dreamer_command': 
+                    if self._policy_cfg.type == 'dreamer_command':
                         policy_output = self._policy.forward(
                             stack_obs, **policy_kwargs, reset=self._resets, state=self._states
                         )
@@ -244,25 +256,8 @@ class InteractionAdversarySerialEvaluator(ISerialEvaluator):
                         self._states = [output['state'] for output in policy_output.values()]
                     else:
                         policy_output = self._policy.forward(stack_obs, **policy_kwargs)
-                    noises_action = {i: a['action'] for i, a in policy_output.items()}
-                    noises_action = to_ndarray(noises_action)
-                    noises_action = {i: torch.clamp(torch.tensor(a), -1 * self._epsilon, self._epsilon) for i, a in noises_action.items()}
-
-                    stack_obs = {env_id: stack_obs[env_id] + noises_action[env_id] for env_id in stack_obs.keys()}
-
-                    if self.policy_agent_config.type == 'sampled_ppo':
-                        policy_agent_output = self._policy_agent.forward(stack_obs, **policy_kwargs)
-                    else:
-                        stack_obs = list(stack_obs.values())
-                        stack_obs = to_ndarray(stack_obs)
-                        stack_obs = prepare_observation(stack_obs, self.policy_agent_config.model.model_type)
-                        stack_obs = torch.from_numpy(stack_obs).to(self.policy_agent_config.device).float()
-                        action_mask = [obs[env_id]['action_mask'] for env_id in obs.keys()]
-                        to_play = [obs[env_id]['to_play'] for env_id in obs.keys()]
-                        policy_agent_output = self._policy_agent.forward(stack_obs, action_mask, to_play)
-                    actions = {i: a['action'] for i, a in policy_agent_output.items()}
-                    actions = to_ndarray(actions)
-
+                    actions = {i: a['action'] for i, a in policy_output.items()}
+                    actions = to_ndarray(actions) # {0: [ 1.4140064e-11 -8.5030954e-11  9.6781090e-12 -8.3120684e-11,  1.8369785e-11 -5.5578077e-12]}
                     timesteps = self._env.step(actions)
                     timesteps = to_tensor(timesteps, dtype=torch.float32)
                     for env_id, t in timesteps.items():

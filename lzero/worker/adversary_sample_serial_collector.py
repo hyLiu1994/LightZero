@@ -284,15 +284,24 @@ class AdversarySampleSerialCollector(ISerialCollector):
                 noises_action = to_ndarray(noises_action)
                 noises_action = {i: torch.clamp(torch.tensor(a), -1 * self._epsilon, self._epsilon) for i, a in noises_action.items()}
                 stack_obs = {env_id: stack_obs[env_id] + noises_action[env_id].numpy() for env_id in stack_obs.keys()}
-                stack_obs = list(stack_obs.values())
-                action_mask = [obs[env_id]['action_mask'] for env_id in obs.keys()]
-                to_play = [obs[env_id]['to_play'] for env_id in obs.keys()]
-                stack_obs = to_ndarray(stack_obs)
-                stack_obs = prepare_observation(stack_obs, self.policy_agent_config.model.model_type)
-                stack_obs = torch.from_numpy(stack_obs).to(self.policy_agent_config.device).float()
 
                 # Interact with env.
-                policy_agent_output = self._policy_agent.forward(stack_obs, action_mask, to_play)
+                if self.policy_agent_config.type == 'sampled_ppo':
+                    policy_agent_output = self._policy_agent.forward(stack_obs, **policy_kwargs)
+                else:
+                    stack_obs = list(stack_obs.values())
+                    stack_obs = to_ndarray(stack_obs)
+                    stack_obs = prepare_observation(stack_obs, self.policy_agent_config.model.model_type)
+                    stack_obs = torch.from_numpy(stack_obs).to(self.policy_agent_config.device).float()
+                    action_mask = [obs[env_id]['action_mask'] for env_id in obs.keys()]
+                    to_play = [obs[env_id]['to_play'] for env_id in obs.keys()]
+                    policy_agent_output = self._policy_agent.forward(stack_obs, action_mask, to_play)
+                """
+                ppo_agent 采样
+                {0: [-0.00059224 -0.00076086  0.00034198  0.00131571  0.00119788  0.00114011], 
+                1: [-0.00059224 -0.00076086  0.00034198  0.0013157   0.00119787  0.00114011], 
+                2: [-0.00059224 -0.00076086  0.00034198  0.0013157   0.00119787  0.00114011]}
+                """
                 actions = {i: a['action'] for i, a in policy_agent_output.items()}
                 actions = to_ndarray(actions)
                 timesteps = self._env.step(actions)
