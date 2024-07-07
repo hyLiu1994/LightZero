@@ -1,9 +1,9 @@
 from easydict import EasyDict
 
 # options={'Hopper-v3', 'HalfCheetah-v3', 'Walker2d-v3', 'Ant-v3', 'Humanoid-v3'}
-env_id = 'Hopper-v3'
+env_id = 'Hopper-v2'
 
-if env_id == 'Hopper-v3':
+if env_id == 'Hopper-v2':
     action_space_size = 3
     observation_shape = 11
 elif env_id in ['HalfCheetah-v3', 'Walker2d-v3']:
@@ -43,7 +43,7 @@ eval_freq = 50
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
-mujoco_sampled_efficientzero_config = dict(
+mujoco_sampled_ppo_config = dict(
     exp_name=
     f'data_sez_ctree/{env_id[:-3]}_PPO_with_ppo_adversary_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
@@ -69,7 +69,7 @@ mujoco_sampled_efficientzero_config = dict(
             epoch_per_collect=1,
             update_per_collect=1,
             batch_size=batch_size,
-            learning_rate=3e-4,
+            learning_rate=0.003,
             value_weight=0.5,
             entropy_weight=0.001,
             clip_ratio=0.2,
@@ -106,7 +106,7 @@ mujoco_sampled_efficientzero_config = dict(
             epoch_per_collect=1,
             update_per_collect=1,
             batch_size=batch_size,
-            learning_rate=3e-4,
+            learning_rate=0.003,
             value_weight=0.5,
             entropy_weight=0.001,
             clip_ratio=0.2,
@@ -150,10 +150,10 @@ mujoco_sampled_efficientzero_config = dict(
 
 )
 
-mujoco_sampled_efficientzero_config = EasyDict(mujoco_sampled_efficientzero_config)
-main_config = mujoco_sampled_efficientzero_config
+mujoco_sampled_ppo_config = EasyDict(mujoco_sampled_ppo_config)
+main_config = mujoco_sampled_ppo_config
 
-mujoco_sampled_efficientzero_create_config = dict(
+mujoco_sampled_ppo_create_config = dict(
     env=dict(
         type='mujoco_lightzero',
         import_names=['zoo.mujoco.envs.mujoco_lightzero_env'],
@@ -176,8 +176,8 @@ mujoco_sampled_efficientzero_create_config = dict(
     ),
     policy_adversary=dict(type='ppo'),
 )
-mujoco_sampled_efficientzero_create_config = EasyDict(mujoco_sampled_efficientzero_create_config)
-create_config = mujoco_sampled_efficientzero_create_config
+mujoco_sampled_ppo_create_config = EasyDict(mujoco_sampled_ppo_create_config)
+create_config = mujoco_sampled_ppo_create_config
 
 if __name__ == "__main__":
     from lzero.entry import train_ppo_with_adversary
