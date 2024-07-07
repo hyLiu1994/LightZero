@@ -1,9 +1,9 @@
 from easydict import EasyDict
 
 # options={'Hopper-v3', 'HalfCheetah-v3', 'Walker2d-v3', 'Ant-v3', 'Humanoid-v3'}
-env_id = 'Hopper-v3'
+env_id = 'Hopper-v2'
 
-if env_id == 'Hopper-v3':
+if env_id == 'Hopper-v2':
     action_space_size = 3
     observation_shape = 11
 elif env_id in ['HalfCheetah-v3', 'Walker2d-v3']:
