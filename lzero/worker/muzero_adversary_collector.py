@@ -11,6 +11,7 @@ from ding.utils import build_logger, EasyTimer, SERIAL_COLLECTOR_REGISTRY, get_r
 from ding.worker.collector.base_serial_collector import ISerialCollector
 from torch.nn import L1Loss
 
+from ATLA_robust_RL.src import apply_ppo_adversary
 from lzero.mcts.buffer.adversary_game_segment import AdversaryGameSegment as GameSegment
 from lzero.mcts.utils import prepare_observation
 
@@ -66,6 +67,10 @@ class MuZeroAdversaryCollector(ISerialCollector):
         if policy_adversary_config is not None:
             self._epsilon = policy_adversary_config.Epsilon
             self._noise_policy = policy_adversary_config.noise_policy
+            if self._noise_policy == 'ppo':
+                pretrained_ppo_adversary = apply_ppo_adversary.main(policy_adversary_config.env_seed,policy_adversary_config.ppo_adv_config_path,
+                                                                    policy_adversary_config.attack_method, policy_adversary_config.attack_advpolicy_network,
+                                                                    policy_adversary_config.action_shape, policy_adversary_config.obs_shape, policy_adversary_config.action_space)
 
         self._rank = get_rank()
         self._world_size = get_world_size()
@@ -387,7 +392,7 @@ class MuZeroAdversaryCollector(ISerialCollector):
         if hasattr(self, '_noise_policy'):
             observation_window_stack = [[] for _ in range(env_nums)]
             true_observation_window_stack = [[] for _ in range(env_nums)]
-            if self._noise_policy == 'ppo':
+            if self._noise_policy == 'atla_ppo':
                 stack_obs = {env_id: init_obs[env_id]['observation'] for env_id in range(env_nums)}
                 noise = self._policy_adversary.forward(stack_obs)
                 for env_id in noise.keys():
@@ -402,6 +407,11 @@ class MuZeroAdversaryCollector(ISerialCollector):
                         maxlen=self.policy_config.model.frame_stack_num
                     )
                     game_segments[env_id].reset(observation_window_stack[env_id], true_observation_window_stack[env_id])
+            elif self._noise_policy == 'ppo':
+                # pretrained_ppo_adversary
+                stack_obs = {env_id: init_obs[env_id]['observation'] for env_id in range(env_nums)}
+                stack_obs = torch.tensor()
+                pass
             elif self._noise_policy == 'random':
                 for env_id in range(env_nums):
                     noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
