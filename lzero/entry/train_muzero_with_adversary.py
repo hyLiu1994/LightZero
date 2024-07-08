@@ -102,10 +102,11 @@ def train_muzero_with_adversary(
     random_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
     [re.__setattr__('env_type', 'random_evaluator') for re in random_evaluator_env_cfg]
 
-    ppo_adversary_collector_env_cfg = deepcopy(collector_env_cfg)
-    [pca.__setattr__('env_type', 'ppo_adversary_collector') for pca in ppo_adversary_collector_env_cfg]
-    ppo_adversary_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
-    [pea.__setattr__('env_type', 'ppo_adversary_evaluator') for pea in ppo_adversary_evaluator_env_cfg]
+    if policy_adversary_config.noise_policy == 'atla_ppo':
+        ppo_adversary_collector_env_cfg = deepcopy(collector_env_cfg)
+        [pca.__setattr__('env_type', 'ppo_adversary_collector') for pca in ppo_adversary_collector_env_cfg]
+        ppo_adversary_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
+        [pea.__setattr__('env_type', 'ppo_adversary_evaluator') for pea in ppo_adversary_evaluator_env_cfg]
 
     if cfg.policy.noise_policy == 'normal' :
         collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in normal_collector_env_cfg])
@@ -125,10 +126,12 @@ def train_muzero_with_adversary(
     random_evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in random_evaluator_env_cfg])
     random_evaluator_env.seed(cfg.seed, dynamic_seed=False)
 
-    collector_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_adversary_collector_env_cfg])
-    evaluator_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_adversary_evaluator_env_cfg])
-    collector_adversary_env.seed(cfg.seed)
-    evaluator_adversary_env.seed(cfg.seed, dynamic_seed=False)
+    if policy_adversary_config.noise_policy == 'atla_ppo':
+        collector_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_adversary_collector_env_cfg])
+        evaluator_adversary_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_adversary_evaluator_env_cfg])
+        collector_adversary_env.seed(cfg.seed)
+        evaluator_adversary_env.seed(cfg.seed, dynamic_seed=False)
+
     set_pkg_seed(cfg.seed, use_cuda=cfg.policy.cuda)
 
     policy = create_policy(cfg.policy, model=model, enable_field=['learn', 'collect', 'eval'])
@@ -143,8 +146,9 @@ def train_muzero_with_adversary(
     tb_logger = SummaryWriter(os.path.join('./{}/log/'.format(cfg.exp_name), 'serial')) if get_rank() == 0 else None
     learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, instance_name='agent_learner', exp_name=cfg.exp_name)
 
-    learner_adversary = BaseLearner(cfg.policy_adversary.learn.learner, policy_adversary.learn_mode,
-                                    tb_logger, instance_name='adversary_learner', exp_name=cfg.exp_name)
+    if policy_adversary_config.noise_policy == 'atla_ppo':
+        learner_adversary = BaseLearner(cfg.policy_adversary.learn.learner, policy_adversary.learn_mode,
+                                        tb_logger, instance_name='adversary_learner', exp_name=cfg.exp_name)
 
     # ==============================================================
     # MCTS+RL algorithms related core code
@@ -222,43 +226,46 @@ def train_muzero_with_adversary(
         policy_adversary_config=policy_random_adversary_config
     )
 
-    collector_adversary = CollectorAdversary(
-        cfg.policy_adversary.collect.collector,
-        env=collector_adversary_env,
-        policy=policy_adversary.collect_mode,
-        policy_agent=policy.eval_mode,
-        policy_config=policy_adversary_config,
-        policy_agent_config=policy_config,
-        tb_logger=tb_logger,
-        exp_name=cfg.exp_name,
-        instance_name='adversary_collector',
-    )
-    evaluator_adversary = EvaluatorAdversary(
-        cfg.policy_adversary.eval.evaluator,
-        env = evaluator_adversary_env,
-        policy = policy_adversary.eval_mode,
-        policy_agent = policy.eval_mode,
-        policy_config = policy_adversary_config,
-        policy_agent_config = policy_config,
-        tb_logger = tb_logger,
-        exp_name=cfg.exp_name,
-        instance_name='adversary_evaluator',
-    )
-    commander = BaseSerialCommander(
-        cfg.policy_adversary.other.commander,
-        learner_adversary,
-        collector_adversary,
-        evaluator_adversary,
-        None,
-        policy_adversary.command_mode
-    )
+    if policy_adversary_config.noise_policy == 'atla_ppo':
+        collector_adversary = CollectorAdversary(
+            cfg.policy_adversary.collect.collector,
+            env=collector_adversary_env,
+            policy=policy_adversary.collect_mode,
+            policy_agent=policy.eval_mode,
+            policy_config=policy_adversary_config,
+            policy_agent_config=policy_config,
+            tb_logger=tb_logger,
+            exp_name=cfg.exp_name,
+            instance_name='adversary_collector',
+        )
+        evaluator_adversary = EvaluatorAdversary(
+            cfg.policy_adversary.eval.evaluator,
+            env = evaluator_adversary_env,
+            policy = policy_adversary.eval_mode,
+            policy_agent = policy.eval_mode,
+            policy_config = policy_adversary_config,
+            policy_agent_config = policy_config,
+            tb_logger = tb_logger,
+            exp_name=cfg.exp_name,
+            instance_name='adversary_evaluator',
+        )
+        commander = BaseSerialCommander(
+            cfg.policy_adversary.other.commander,
+            learner_adversary,
+            collector_adversary,
+            evaluator_adversary,
+            None,
+            policy_adversary.command_mode
+        )
 
     # ==============================================================
     # Main loop
     # ==============================================================
     # Learner's before_run hook.
     learner.call_hook('before_run')
-    learner_adversary.call_hook('before_run')
+
+    if policy_adversary_config.noise_policy == 'atla_ppo':
+        learner_adversary.call_hook('before_run')
     
     if cfg.policy.update_per_collect is not None:
         update_per_collect = cfg.policy.update_per_collect
@@ -345,28 +352,30 @@ def train_muzero_with_adversary(
             if cfg.policy.use_priority:
                 replay_buffer.update_priority(train_data, log_vars[0]['value_priority_orig'])
 
-        # Collecting Data for Adversary.
-        collect_adversary_kwargs = commander.step()
-        # Evaluate policy performance
-        print("Begin Adversary Evaluator!")
-        if evaluator_adversary.should_eval(learner_adversary.train_iter):
-            stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint, 
-                                                       learner_adversary.train_iter, collector_adversary.envstep)
-            if stop:
-                break
+        if policy_adversary_config.noise_policy == 'atla_ppo':
+            # Evaluate policy performance
+            print("Begin Adversary Evaluator!")
+            # Collecting Data for Adversary.
+            collect_adversary_kwargs = commander.step()
+            if evaluator_adversary.should_eval(learner_adversary.train_iter):
+                stop, eval_info = evaluator_adversary.eval(learner_adversary.save_checkpoint,
+                                                           learner_adversary.train_iter, collector_adversary.envstep)
+                if stop:
+                    break
 
-        print("Begin Adversary Collector!")
-        # Collect data by default config n_sample/n_episode
-        new_data = collector_adversary.collect(train_iter=learner_adversary.train_iter, policy_kwargs=collect_adversary_kwargs)
+            print("Begin Adversary Collector!")
+            # Collect data by default config n_sample/n_episode
+            new_data = collector_adversary.collect(train_iter=learner_adversary.train_iter, policy_kwargs=collect_adversary_kwargs)
 
-        print("Begin Adversary Learner!")
-        # Learn policy from collected data
-        learner_adversary.train(new_data, collector_adversary.envstep)
+            print("Begin Adversary Learner!")
+            # Learn policy from collected data
+            learner_adversary.train(new_data, collector_adversary.envstep)
 
         if collector.envstep >= max_env_step or learner.train_iter >= max_train_iter:
             break
 
     # Learner's after_run hook.
     learner.call_hook('after_run')
-    learner_adversary.call_hook('after_run')
+    if policy_adversary_config.noise_policy == 'atla_ppo':
+        learner_adversary.call_hook('after_run')
     return policy

@@ -1,7 +1,7 @@
 import os
-import numpy as np
 import pandas as pd
 import argparse
+
 parser = argparse.ArgumentParser()
 parser.add_argument('path', type=str)
 args = vars(parser.parse_args())

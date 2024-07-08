@@ -1,10 +1,9 @@
 import os
-import numpy as np
 import argparse
 import uuid
 from cox.store import Store
-import pickle
-from policy_gradients.torch_utils import *
+
+from .policy_gradients.torch_utils import *
 import torch as ch
 
 # Avoid HDF5 error

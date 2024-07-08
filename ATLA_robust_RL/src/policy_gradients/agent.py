@@ -815,46 +815,6 @@ class Trainer():
             raise ValueError(f'Unknown attack method {self.params.ATTACK_METHOD}')
 
 
-
-    def apply_ppo_attack(self, last_states):
-        eps = self.params.ATTACK_EPS
-        if eps == "same":
-            eps = self.params.ROBUST_PPO_EPS
-        else:
-            eps = float(eps)
-        if self.params.ATTACK_METHOD == "random":
-            # Apply an uniform random noise.
-            noise = torch.empty_like(last_states).uniform_(-eps, eps)
-            return (last_states + noise).detach()
-        elif self.params.ATTACK_METHOD == "advpolicy":
-            # Attack using a learned policy network.
-            assert self.params.ATTACK_ADVPOLICY_NETWORK is not None
-            if not hasattr(self, "attack_policy_network"):
-                self.attack_policy_network = self.policy_net_class(self.NUM_FEATURES, self.NUM_FEATURES,
-                                                 self.INITIALIZATION,
-                                                 time_in_state=self.VALUE_CALC == "time",
-                                                 activation=self.policy_activation)
-                print("Loading adversary policy network", self.params.ATTACK_ADVPOLICY_NETWORK)
-                advpolicy_ckpt = torch.load(self.params.ATTACK_ADVPOLICY_NETWORK)
-                self.attack_policy_network.load_state_dict(advpolicy_ckpt['adversary_policy_model'])
-            # Unlike other attacks we don't need step or eps here.
-            # We don't sample and use deterministic adversary policy here.
-            perturbations_mean, _ = self.attack_policy_network(last_states)
-            # Clamp using tanh.
-            perturbed_states = last_states + ch.nn.functional.hardtanh(perturbations_mean) * eps
-            """
-            adv_perturbation_pds = self.attack_policy_network(last_states)
-            next_adv_perturbations = self.attack_policy_network.sample(adv_perturbation_pds)
-            perturbed_states = last_states + ch.tanh(next_adv_perturbations) * eps
-            """
-            return perturbed_states.detach()
-        elif self.params.ATTACK_METHOD == "none":
-            return last_states
-        else:
-            raise ValueError(f'Unknown attack method {self.params.ATTACK_METHOD}')
-
-
-
     """Run trajectories and return saps and values for each state."""
     def collect_saps(self, num_saps, should_log=True, return_rewards=False,
                      should_tqdm=False, test=False, collect_adversary_trajectory=False):

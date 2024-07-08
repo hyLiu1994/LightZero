@@ -1,11 +1,10 @@
 import os
-import numpy as np
 from PIL import Image
 from gym.spaces.discrete import Discrete
 from gym.spaces.box import Box as Continuous
 import gym
 import random
-from .torch_utils import RunningStat, ZFilter, Identity, StateWithTime, RewardFilter
+from .torch_utils import  ZFilter, Identity, StateWithTime, RewardFilter
 
 class Env:
     '''

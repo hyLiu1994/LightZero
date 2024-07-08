@@ -4,10 +4,9 @@ import torch
 import copy
 import numpy as np
 
-from ding.torch_utils import Adam, to_device, to_dtype, unsqueeze, ContrastiveLoss
-from ding.rl_utils import ppo_data, ppo_error, ppo_policy_error, ppo_policy_data, get_gae_with_default_last_value, \
-    v_nstep_td_data, v_nstep_td_error, get_nstep_return_data, get_train_sample, gae, gae_data, ppo_error_continuous, \
-    get_gae, ppo_policy_error_continuous
+from ding.torch_utils import Adam, to_device, to_dtype, unsqueeze
+from ding.rl_utils import ppo_data, ppo_error, ppo_policy_error, ppo_policy_data, get_train_sample, gae, gae_data, ppo_error_continuous, \
+    get_gae
 from ding.model import model_wrap
 from ding.utils import POLICY_REGISTRY, split_data_generator, RunningMeanStd
 from ding.utils.data import default_collate, default_decollate

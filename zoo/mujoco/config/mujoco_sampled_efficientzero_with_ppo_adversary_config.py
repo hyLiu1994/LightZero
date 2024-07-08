@@ -1,9 +1,10 @@
 from easydict import EasyDict
-
+import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # options={'Hopper-v3', 'HalfCheetah-v3', 'Walker2d-v3', 'Ant-v3', 'Humanoid-v3'}
-env_id = 'Hopper-v3'
+env_id = 'Hopper-v2'
 
-if env_id == 'Hopper-v3':
+if env_id == 'Hopper-v2':
     action_space_size = 3
     observation_shape = 11
 elif env_id in ['HalfCheetah-v3', 'Walker2d-v3']:
@@ -95,13 +96,13 @@ mujoco_sampled_efficientzero_config = dict(
         recompute_adv=True,
         action_space='continuous',  # discrete
         obs_shape=observation_shape,
-        action_shape=observation_shape,
+        action_shape=action_space_size,
         env_seed=seed,
         ppo_adv_config_path='/root/code/LightZero/ATLA_robust_RL/src/config_hopper_atla_ppo.json',
         attack_method='advpolicy',
         attack_advpolicy_network= '/root/code/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-hopper.model',
         Epsilon=0.0075,
-        noise_policy='ppo',
+        noise_policy='ppo',  # 'atla_ppo' 'ppo'
         model=dict(
             obs_shape=observation_shape,
             action_shape=observation_shape,

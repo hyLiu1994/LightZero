@@ -9,8 +9,9 @@ import traceback
 import subprocess
 from glob import glob
 from os import path
-from run import main, add_common_parser_opts, override_json_params
 import json
+from run import main, add_common_parser_opts, override_json_params
+
 
 q = JoinableQueue()
 

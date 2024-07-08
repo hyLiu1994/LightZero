@@ -1,16 +1,15 @@
-from ATLA_robust_RL.src.policy_gradients.agent import Trainer
 import git
 import random
 import numpy as np
 import os
 import argparse
 import traceback
-from ATLA_robust_RL.src.policy_gradients import models
 import sys
 import json
 import torch
 from cox.store import Store, schema_from_dict
-
+from .policy_gradients.agent import Trainer
+from .policy_gradients import models
 
 # Tee object allows for logging to both stdout and to file
 class Tee(object):

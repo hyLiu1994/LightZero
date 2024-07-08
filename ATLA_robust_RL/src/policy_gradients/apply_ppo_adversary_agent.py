@@ -445,7 +445,7 @@ class Trainer(object):
             next_adv_perturbations = self.attack_policy_network.sample(adv_perturbation_pds)
             perturbed_states = last_states + ch.tanh(next_adv_perturbations) * eps
             """
-            return perturbations_mean
+            return perturbations_mean  # perturbed_states.detach()
         elif self.params.ATTACK_METHOD == "none":
             return last_states
         else:

@@ -3,7 +3,7 @@ import math
 import functools
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
-from ATLA_robust_RL.src.policy_gradients.torch_utils import *
+from .torch_utils import *
 
 '''
 Neural network models for estimating value and policy functions

@@ -5,12 +5,11 @@ import random
 import argparse
 import json
 import torch
-from .policy_gradients import models
-from .policy_gradients.apply_ppo_adversary_agent import Trainer
 import logging
-
 logging.disable(logging.INFO)
 
+from .policy_gradients import models
+from .policy_gradients.apply_ppo_adversary_agent import Trainer
 
 def apply(params):
     override_params = copy.deepcopy(params)
@@ -30,7 +29,8 @@ def apply(params):
     if params['config_path']:
         # Load from a pretrained model using existing config.
         # First we need to create the model using the given config file.
-        json_params = json.load(open(params['config_path']))
+        with open(params['config_path']) as file:
+            json_params = json.load(file)
         
         params = override_json_params(params, json_params, excluded_params)
 

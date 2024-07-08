@@ -1,9 +1,9 @@
 import random
+from torch import nn
 from auto_LiRPA import BoundedModule, BoundedTensor
 from auto_LiRPA.perturbations import *
+from .models import activation_with_name
 
-from ATLA_robust_RL.src.policy_gradients.models import activation_with_name
-from torch import nn
 
 forward_one = True
 

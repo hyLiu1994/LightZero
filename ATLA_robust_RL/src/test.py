@@ -1,6 +1,5 @@
 import pickle
 import sqlite3
-from ATLA_robust_RL.src.policy_gradients.agent import Trainer
 import numpy as np
 import os
 import copy
@@ -8,13 +7,12 @@ import random
 import argparse
 import json
 import torch
+import logging
+logging.disable(logging.INFO)
+from auto_LiRPA.eps_scheduler import LinearScheduler
 from cox.store import Store
 from run import add_common_parser_opts, override_json_params
-from auto_LiRPA.eps_scheduler import LinearScheduler
-import logging
-
-logging.disable(logging.INFO)
-
+from .policy_gradients.agent import Trainer
 
 def main(params):
     override_params = copy.deepcopy(params)

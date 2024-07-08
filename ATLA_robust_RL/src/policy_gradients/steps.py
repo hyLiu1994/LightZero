@@ -1,18 +1,14 @@
 import functools
-import torch as ch
-import torch.nn.functional as F
-from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
-import numpy as np
+from torch.nn.utils.rnn import pad_sequence
 import math
-import time
 from tqdm import tqdm
 from torch.nn.utils import parameters_to_vector as flatten
 from torch.nn.utils import vector_to_parameters as assign
-from .torch_utils import *
 import matplotlib as mpl
 mpl.use('Agg')  # No display
-import matplotlib.pyplot as plt
+
 from .convex_relaxation import get_kl_bound as get_state_kl_bound
+from .torch_utils import *
 
 '''
 File for taking steps in both policy and value network space.

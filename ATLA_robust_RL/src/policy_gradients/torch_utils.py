@@ -93,7 +93,7 @@ def cpu_tensorize(t):
     '''
     return ch.tensor(t).float()
 
-def gpu_mapper():
+def gpu_mapper(cpu):
     return ch.device('cuda:0') if not cpu else ch.device('cpu')
 
 def shape_equal_cmp(*args):

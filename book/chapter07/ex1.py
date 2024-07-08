@@ -6,7 +6,7 @@ import torch.nn
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from book.chapter07.rl_utils import ReplayBuffer
+from book.rl_utils import ReplayBuffer
 
 
 class Qnet(torch.nn.Module):
