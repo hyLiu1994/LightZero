@@ -136,7 +136,7 @@ class SampledEfficientZeroPolicy(MuZeroPolicy):
         policy_loss_type='cross_entropy',  # options={'cross_entropy', 'KL'}
         # (int) Frequency of target network update.
         target_update_freq=100,
-        weight_decay=1e-4,
+        weight_decay=5e-6,
         momentum=0.9,
         grad_clip_value=10,
         # You can use either "n_sample" or "n_episode" in collector.collect.
