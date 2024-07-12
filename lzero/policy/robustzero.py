@@ -419,6 +419,7 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
 
         value_prefix_loss = torch.zeros(self._cfg.batch_size, device=self._cfg.device)
         consistency_loss = torch.zeros(self._cfg.batch_size, device=self._cfg.device)
+        obs_cl_consistency_loss = torch.zeros(self._cfg.batch_size, device=self._cfg.device)
 
         # ==============================================================
         # the core recurrent_inference in SampledEfficientZero policy.
@@ -438,24 +439,24 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
             # i.e. h^(-1)(.) function in paper https://arxiv.org/pdf/1805.11593.pdf.
             original_value = self.inverse_scalar_transform_handle(value)
 
-            # if self._cfg.model.self_supervised_learning_loss:
-            #     # ==============================================================
-            #     # calculate consistency loss for the next ``num_unroll_steps`` unroll steps.
-            #     # ==============================================================
-            #     if self._cfg.ssl_loss_weight > 0:
-            #         # obtain the oracle latent states from representation function.
-            #         beg_index, end_index = self._get_target_obs_index_in_step_k(step_k)
-            #         network_output = self._learn_model.initial_inference(obs_target_batch[:, beg_index:end_index])
-            #
-            #         latent_state = to_tensor(latent_state)
-            #         representation_state = to_tensor(network_output.latent_state)
-            #
-            #         # NOTE: no grad for the representation_state branch.
-            #         dynamic_proj = self._learn_model.project(latent_state, with_grad=True)
-            #         observation_proj = self._learn_model.project(representation_state, with_grad=False)
-            #         temp_loss = negative_cosine_similarity(dynamic_proj, observation_proj) * mask_batch[:, step_k]
-            #
-            #         consistency_loss += temp_loss
+            if self._cfg.model.self_supervised_learning_loss:
+                # ==============================================================
+                # calculate consistency loss for the next ``num_unroll_steps`` unroll steps.
+                # ==============================================================
+                if self._cfg.ssl_loss_weight > 0:
+                    # obtain the oracle latent states from representation function.
+                    beg_index, end_index = self._get_target_obs_index_in_step_k(step_k)
+                    network_output = self._learn_model.initial_inference(obs_target_batch[:, beg_index:end_index])
+
+                    latent_state = to_tensor(latent_state)
+                    representation_state = to_tensor(network_output.latent_state)
+
+                    # NOTE: no grad for the representation_state branch.
+                    dynamic_proj = self._learn_model.project(latent_state, with_grad=True)
+                    observation_proj = self._learn_model.project(representation_state, with_grad=False)
+                    temp_loss = negative_cosine_similarity(dynamic_proj, observation_proj) * mask_batch[:, step_k]
+
+                    consistency_loss += temp_loss
 
             if self._cfg.model.self_supervised_adversary_learning_loss:
                 # ==============================================================
@@ -475,7 +476,7 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
                         true_obs_proj = self._learn_model.project(true_obs, with_grad=False)
                         temp_loss = negative_cosine_similarity(obs_proj, true_obs_proj) * mask_batch[:, step_k]
 
-                        consistency_loss += temp_loss
+                        obs_cl_consistency_loss += temp_loss
 
             # NOTE: the target policy, target_value_categorical, target_value_prefix_categorical is calculated in
             # game buffer now.
@@ -531,19 +532,19 @@ class SampledTwoAdversaryEfficientZeroPolicy(MuZeroPolicy):
         # ==============================================================
         # weighted loss with masks (some invalid states which are out of trajectory.)
         loss = (
-                self._cfg.c3 * consistency_loss + self._cfg.policy_loss_weight * policy_loss +
+                self._cfg.c3 * obs_cl_consistency_loss + self._cfg.ssl_loss_weight * consistency_loss + self._cfg.policy_loss_weight * policy_loss +
                 self._cfg.value_loss_weight * value_loss + self._cfg.reward_loss_weight * value_prefix_loss +
                 self._cfg.policy_entropy_loss_weight * policy_entropy_loss
         )
-        # weighted_total_loss = (weights * loss).mean()
+        weighted_total_loss = (weights * loss).mean()
 
         if self._cfg.monitor_extra_statistics:
             predicted_value_prefixs = torch.stack(predicted_value_prefixs).transpose(1, 0).squeeze(-1)
             predicted_value_prefixs = predicted_value_prefixs.reshape(-1).unsqueeze(-1)
 
         return_data = {
-            'loss': loss,
-            'sim_cl_loss': consistency_loss,
+            'loss': weighted_total_loss,
+            'sim_cl_loss': obs_cl_consistency_loss,
             'cur_lr': self._optimizer.param_groups[0]['lr'],
             'collect_mcts_temperature': self._collect_mcts_temperature,
             'total_loss': loss.mean().item(),

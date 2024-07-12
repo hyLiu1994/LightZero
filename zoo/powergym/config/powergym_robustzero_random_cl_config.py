@@ -6,7 +6,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 env_id = '13Bus'
 
 if env_id == '13Bus':
-    action_space_size = 6
+    action_space_size = 6  
     observation_shape = 48
 elif env_id == '34Bus':
     action_space_size = 10
@@ -38,7 +38,7 @@ policy_entropy_loss_weight = 0.005
 
 powergym_sampled_efficientzero_config = dict(
     exp_name=
-f'data_sez_ctree/{env_id}_RobustZero_with_ppo_cl_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+f'data_sez_ctree/{env_id}_RobustZero_with_Random_cl_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -62,6 +62,9 @@ f'data_sez_ctree/{env_id}_RobustZero_with_ppo_cl_ns{num_simulations}_upc{update_
             self_supervised_adversary_learning_loss=True,
             res_connection_in_dynamics=True,
         ),
+        # ssl_adversary_loss_weight
+        c3=0.5,
+        # -------------------------
         cuda=True,
         policy_entropy_loss_weight=policy_entropy_loss_weight,
         ignore_done=ignore_done,
@@ -82,7 +85,7 @@ f'data_sez_ctree/{env_id}_RobustZero_with_ppo_cl_ns{num_simulations}_upc{update_
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
         mcts_ctree=True,
-        noise_policy = 'ppo'
+        noise_policy = 'random'
     ),
     policy_adversary=dict(
         cuda=True,

@@ -114,7 +114,7 @@ def train_muzero_with_adversary(
     evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in normal_evaluator_env_cfg])
     evaluator_env.seed(cfg.seed, dynamic_seed=False)
 
-    if cfg.policy.noise_policy == 'ppo':
+    if cfg.policy.noise_policy == 'ppo' or cfg.policy.noise_policy == 'atla_ppo':
         ppo_collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_collector_env_cfg])
         ppo_collector_env.seed(cfg.seed)
     ppo_evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_evaluator_env_cfg])
@@ -177,7 +177,7 @@ def train_muzero_with_adversary(
         policy_config=policy_config,
         instance_name="agent_evaluator"
     )
-    if cfg.policy.noise_policy == 'ppo':
+    if cfg.policy.noise_policy == 'ppo' or cfg.policy.noise_policy == 'atla_ppo':
         collector = Collector(
             env=ppo_collector_env,
             policy=policy.collect_mode,

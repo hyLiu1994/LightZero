@@ -70,6 +70,8 @@ mujoco_sampled_efficientzero_config = dict(
             res_connection_in_dynamics=True,
         ),
         # ssl_adversary_loss_weight
+        c3=0.5,
+        #-------------------
         cuda=True,
         policy_entropy_loss_weight=policy_entropy_loss_weight,
         ignore_done=ignore_done,

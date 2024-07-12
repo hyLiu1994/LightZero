@@ -76,10 +76,11 @@ f'data_sez_ctree/{env_id[:-3]}_Muzero_ns{num_simulations}_upc{update_per_collect
         update_per_collect=update_per_collect,
         batch_size=batch_size,
         discount_factor=0.997,
-        optim_type='AdamW',
+        optim_type='Adam',
         lr_piecewise_constant_decay=False,
         learning_rate=0.003,
-        grad_clip_value=0.5,
+        grad_clip_value=0.5,  # 需要小点
+        weight_decay=5e-6,  # 0.01 不太行
         num_simulations=num_simulations,
         reanalyze_ratio=reanalyze_ratio,
         n_episode=n_episode,

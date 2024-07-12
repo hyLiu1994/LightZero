@@ -162,7 +162,6 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
         policy_entropy_loss_weight=0,
         # (float) The weight of ssl (self-supervised learning) loss.
         ssl_loss_weight=2,
-        ssl_adversary_loss_weight=2,
         c3 = 2.0,
         # (bool) Whether to use the cosine learning rate decay.
         cos_lr_scheduler=False,
@@ -415,6 +414,7 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
 
         value_prefix_loss = torch.zeros(self._cfg.batch_size, device=self._cfg.device)
         consistency_loss = torch.zeros(self._cfg.batch_size, device=self._cfg.device)
+        obs_cl_consistency_loss = torch.zeros(self._cfg.batch_size, device=self._cfg.device)
 
         # ==============================================================
         # the core recurrent_inference in SampledEfficientZero policy.
@@ -434,30 +434,30 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
             # i.e. h^(-1)(.) function in paper https://arxiv.org/pdf/1805.11593.pdf.
             original_value = self.inverse_scalar_transform_handle(value)
 
-            # if self._cfg.model.self_supervised_learning_loss:
-            #     # ==============================================================
-            #     # calculate consistency loss for the next ``num_unroll_steps`` unroll steps.
-            #     # ==============================================================
-            #     if self._cfg.ssl_loss_weight > 0:
-            #         # obtain the oracle latent states from representation function.
-            #         beg_index, end_index = self._get_target_obs_index_in_step_k(step_k)
-            #         network_output = self._learn_model.initial_inference(obs_target_batch[:, beg_index:end_index])
-            #
-            #         latent_state = to_tensor(latent_state)
-            #         representation_state = to_tensor(network_output.latent_state)
-            #
-            #         # NOTE: no grad for the representation_state branch.
-            #         dynamic_proj = self._learn_model.project(latent_state, with_grad=True)
-            #         observation_proj = self._learn_model.project(representation_state, with_grad=False)
-            #         temp_loss = negative_cosine_similarity(dynamic_proj, observation_proj) * mask_batch[:, step_k]
-            #
-            #         consistency_loss += temp_loss
+            if self._cfg.model.self_supervised_learning_loss:
+                # ==============================================================
+                # calculate consistency loss for the next ``num_unroll_steps`` unroll steps.
+                # ==============================================================
+                if self._cfg.ssl_loss_weight > 0:
+                    # obtain the oracle latent states from representation function.
+                    beg_index, end_index = self._get_target_obs_index_in_step_k(step_k)
+                    network_output = self._learn_model.initial_inference(obs_target_batch[:, beg_index:end_index])
+
+                    latent_state = to_tensor(latent_state)
+                    representation_state = to_tensor(network_output.latent_state)
+
+                    # NOTE: no grad for the representation_state branch.
+                    dynamic_proj = self._learn_model.project(latent_state, with_grad=True)
+                    observation_proj = self._learn_model.project(representation_state, with_grad=False)
+                    temp_loss = negative_cosine_similarity(dynamic_proj, observation_proj) * mask_batch[:, step_k]
+
+                    consistency_loss += temp_loss
 
             if self._cfg.model.self_supervised_adversary_learning_loss:
                 # ==============================================================
                 # calculate consistency loss for the next ``num_unroll_steps`` unroll steps.
                 # ==============================================================
-                if self._cfg.ssl_adversary_loss_weight > 0:
+                if self._cfg.c3 > 0:
                     # obtain the oracle latent states from representation function.
                     obs = to_tensor(obs_batch)
                     true_obs = to_tensor(true_obs_batch)
@@ -468,7 +468,7 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
                         true_obs_proj = self._learn_model.project(true_obs, with_grad=False)
                         temp_loss = negative_cosine_similarity(obs_proj, true_obs_proj) * mask_batch[:, step_k]
 
-                        consistency_loss += temp_loss
+                        obs_cl_consistency_loss += temp_loss
 
 
             # NOTE: the target policy, target_value_categorical, target_value_prefix_categorical is calculated in
@@ -525,11 +525,12 @@ class SampledAdversaryEfficientZeroPolicy(MuZeroPolicy):
         # ==============================================================
         # weighted loss with masks (some invalid states which are out of trajectory.)
         loss = (
-                self._cfg.ssl_adversary_loss_weight * consistency_loss + self._cfg.policy_loss_weight * policy_loss +
+                self._cfg.c3 * obs_cl_consistency_loss + self._cfg.ssl_loss_weight * consistency_loss +
+                self._cfg.policy_loss_weight * policy_loss +
                 self._cfg.value_loss_weight * value_loss + self._cfg.reward_loss_weight * value_prefix_loss +
                 self._cfg.policy_entropy_loss_weight * policy_entropy_loss
         )
-        weighted_total_loss = (self._cfg.c3 * loss).mean()
+        weighted_total_loss = (weights * loss).mean()
 
         gradient_scale = 1 / self._cfg.num_unroll_steps
         weighted_total_loss.register_hook(lambda grad: grad * gradient_scale)

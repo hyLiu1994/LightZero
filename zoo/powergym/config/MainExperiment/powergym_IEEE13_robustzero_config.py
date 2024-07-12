@@ -1,7 +1,7 @@
 from easydict import EasyDict
 import zoo.powergym.env_manager.power_gym_subprocess_env_manager
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 # options={'13Bus', '34Bus', '123Bus', '8500-Node'}
 env_id = '13Bus'
