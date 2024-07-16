@@ -2,7 +2,7 @@ from easydict import EasyDict
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-# options={'Hopper-v3', 'HalfCheetah-v3', 'Walker2d-v3', 'Ant-v3', 'Humanoid-v3'}
+# options={'Hopper-v2', 'HalfCheetah-v3', 'Walker2d-v3', 'Ant-v3', 'Humanoid-v3'}
 env_id = 'Hopper-v2'
 
 if env_id == 'Hopper-v2':
@@ -32,7 +32,7 @@ collector_env_num = 8
 evaluator_env_num = 3
 continuous_action_space = True
 K = 20  # num_of_sampled_actions
-num_simulations = 50
+num_simulations = 50    # 2/5
 update_per_collect = 200
 batch_size = 128
 
@@ -76,7 +76,7 @@ mujoco_robustzero_config = dict(
         c4=1,
         robustzero_w1 = 1,
         optim_type='AdamAd',
-        robustzero_lambda = 5e-6,  #  0.0015
+        robustzero_lambda=0.0001,  #  0.0015  5e-6    5e-5 0.015 0.001
         # -------------------------------
         learning_rate=0.003,
         grad_clip_value=0.5,

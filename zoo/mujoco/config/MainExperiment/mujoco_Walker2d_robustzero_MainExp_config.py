@@ -3,12 +3,12 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # options={'Hopper-v3', 'HalfCheetah-v3', 'Walker2d-v3', 'Ant-v3', 'Humanoid-v3'}
-env_id = 'Walker2d-v3'
+env_id = 'Walker2d-v2'
 
 if env_id == 'Hopper-v3':
     action_space_size = 3
     observation_shape = 11
-elif env_id in ['HalfCheetah-v3', 'Walker2d-v3']:
+elif env_id in ['HalfCheetah-v3', 'Walker2d-v2']:
     action_space_size = 6
     observation_shape = 17
 elif env_id == 'Ant-v3':
