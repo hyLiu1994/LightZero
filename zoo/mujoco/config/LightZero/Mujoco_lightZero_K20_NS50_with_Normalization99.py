@@ -32,7 +32,7 @@ n_episode = 8
 evaluator_env_num = 3
 continuous_action_space = True
 K = 20  # num_of_sampled_actions
-num_simulations = 800
+num_simulations = 50
 update_per_collect = 200
 batch_size = 256
 
@@ -46,11 +46,13 @@ policy_entropy_loss_weight = 0.005
 
 mujoco_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree/{env_id[:-3]}_sampledZero_K{K}_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+    f'data_sez_ctree/{env_id[:-3]}_sampledZero_withNormalization99_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
         continuous=True,
+        norm_obs=dict(use_norm=True, ),
+        norm_reward=dict(use_norm=True, reward_discount=0.99),
         manually_discretization=False,
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
