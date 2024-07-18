@@ -19,6 +19,8 @@ from lzero.policy import visit_count_temperature
 from lzero.policy.random_policy import LightZeroRandomPolicy
 from lzero.worker import MuZeroAdversaryCollector as Collector
 from lzero.worker import MuZeroAdversaryEvaluator as Evaluator
+from lzero.worker import MuZeroCollector as muZeroCollector
+from lzero.worker import MuZeroEvaluator as muZeroEvaluator
 from .utils import random_collect
 
 
@@ -133,7 +135,7 @@ def train_muzero_with_adversary(
     # specific game buffer for MCTS+RL algorithms
     replay_buffer = GameBuffer(policy_config)
     if cfg.policy.noise_policy == 'normal':
-        collector = Collector(
+        collector = muZeroCollector(
             env=collector_env,
             policy=policy.collect_mode,
             tb_logger=tb_logger,
@@ -141,7 +143,7 @@ def train_muzero_with_adversary(
             policy_config=policy_config,
             instance_name="agent_collector"
         )
-    evaluator = Evaluator(
+    evaluator = muZeroEvaluator(
         eval_freq=cfg.policy.eval_freq,
         n_evaluator_episode=cfg.env.n_evaluator_episode,
         stop_value=cfg.env.stop_value,

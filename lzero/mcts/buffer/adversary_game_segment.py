@@ -132,7 +132,7 @@ class AdversaryGameSegment(GameSegment):
         if self.use_ture_chance_label_in_chance_encoder:
             self.chance_segment.append(chance)
         if true_obs is None:
-            self.obs_true_segment.append(obs)
+            self.obs_true_segment.append(copy.deepcopy(obs))
         else:
             self.obs_true_segment.append(true_obs)
 
