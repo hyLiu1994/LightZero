@@ -51,25 +51,9 @@ def train_muzero_with_adversary(
     """
 
     cfg, create_cfg = input_cfg
-    assert create_cfg.policy.type in ['efficientzero', 'muzero',  'gumbel_muzero', 'stochastic_muzero',
-                                      'sampled_efficientzero', 'sampled_adversary_efficientzero',
-                                      'sampled_two_adversary_efficientzero'], \
-        "train_muzero entry now only support the following algo.: 'efficientzero', 'muzero', 'gumbel_muzero', 'sampled_efficientzero', 'sampled_adversary_efficientzero', 'sampled_two_adversary_efficientzero' "
-
-    if create_cfg.policy.type == 'muzero':
-        from lzero.mcts import MuZeroGameBuffer as GameBuffer
-    elif create_cfg.policy.type == 'efficientzero':
-        from lzero.mcts import EfficientZeroGameBuffer as GameBuffer
-    elif create_cfg.policy.type == 'sampled_efficientzero':
-        from lzero.mcts import SampledEfficientZeroGameBuffer as GameBuffer
-    elif create_cfg.policy.type == 'sampled_adversary_efficientzero':
-        from lzero.mcts import AdversarySampledEfficientZeroGameBuffer as GameBuffer
-    elif create_cfg.policy.type == 'sampled_two_adversary_efficientzero':
-        from lzero.mcts import AdversarySampledEfficientZeroGameBuffer as GameBuffer
-    elif create_cfg.policy.type == 'gumbel_muzero':
-        from lzero.mcts import GumbelMuZeroGameBuffer as GameBuffer
-    elif create_cfg.policy.type == 'stochastic_muzero':
-        from lzero.mcts import StochasticMuZeroGameBuffer as GameBuffer
+    assert create_cfg.policy.type in ['sampled_adversary_efficientzero'], \
+        "train_muzero entry now only support the following algo.: 'sampled_adversary_efficientzero' "
+    from lzero.mcts import AdversarySampledEfficientZeroGameBuffer as GameBuffer
 
     if cfg.policy.cuda and torch.cuda.is_available():
         cfg.policy.device = 'cuda'

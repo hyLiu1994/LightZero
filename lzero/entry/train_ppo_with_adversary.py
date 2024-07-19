@@ -49,11 +49,8 @@ def train_ppo_with_adversary(
     """
 
     cfg, create_cfg = input_cfg
-    assert create_cfg.policy.type in ['efficientzero', 'muzero',  'gumbel_muzero', 'stochastic_muzero',
-                                      'sampled_efficientzero', 'sampled_adversary_efficientzero',
-                                      'sampled_two_adversary_efficientzero', 'sampled_ppo'], \
-        ("train_muzero entry now only support the following algo.: 'efficientzero', 'muzero', 'gumbel_muzero', "
-         "'sampled_efficientzero', 'sampled_adversary_efficientzero', 'sampled_two_adversary_efficientzero', 'sampled_ppo' ")
+    assert create_cfg.policy.type in [ 'sampled_ppo'], \
+        ("train_muzero entry now only support the following algo.: 'sampled_ppo' ")
 
     # sampled_ppo 不需要buffer
     # if create_cfg.policy.type == 'muzero':
