@@ -258,9 +258,12 @@ class MuZeroEvaluator(ISerialEvaluator):
             ready_env_id = set()
             remain_episode = n_episode
 
+            env_step = 0
             with self._timer:
                 while not eval_monitor.is_finished():
                     # Get current ready env obs.
+                    print(env_step)
+                    env_step += 1
                     obs = self._env.ready_obs
                     new_available_env_id = set(obs.keys()).difference(ready_env_id)
                     ready_env_id = ready_env_id.union(set(list(new_available_env_id)[:remain_episode]))
@@ -333,7 +336,9 @@ class MuZeroEvaluator(ISerialEvaluator):
                         # NOTE: the position of code snippet is very important.
                         # the obs['action_mask'] and obs['to_play'] are corresponding to next action
                         action_mask_dict[env_id] = to_ndarray(obs['action_mask'])
-                        to_play_dict[env_id] = to_ndarray(obs['to_play'].cpu())
+                        if torch.is_tensor(obs['to_play']) and obs['to_play'].is_cuda:
+                            obs['to_play'] = obs['to_play'].cpu()
+                        to_play_dict[env_id] = to_ndarray(obs['to_play'])
 
                         dones[env_id] = done
                         if t.done:

@@ -428,8 +428,10 @@ class MuZeroAdversaryCollector(ISerialCollector):
 
             elif self._noise_policy == 'random':
                 for env_id in range(env_nums):
-                    noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
-                    noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                    # noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
+                    # noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                    noise = np.random.uniform(-1 * self._epsilon, self._epsilon, len(init_obs[env_id]['observation']))
+                    noise = torch.Tensor(noise).cpu()
                     observation_window_stack[env_id] = deque(
                         [to_ndarray(init_obs[env_id]['observation'] + noise.numpy()) for _ in
                          range(self.policy_config.model.frame_stack_num)],
@@ -568,8 +570,10 @@ class MuZeroAdversaryCollector(ISerialCollector):
                             timesteps[env_id].obs['observation'] = timesteps[env_id].obs['observation'] + noise.cpu().tolist()
                     elif self._noise_policy == 'random':
                         for env_id in timesteps.keys():
-                            noise = np.random.normal(0, 0.001, len(timesteps[env_id].obs['observation']))
-                            noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                            # noise = np.random.normal(0, 0.001, len(timesteps[env_id].obs['observation']))
+                            # noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                            noise = np.random.uniform(-1 * self._epsilon, self._epsilon, len(init_obs[env_id]['observation']))
+                            noise = torch.Tensor(noise).cpu()
                             timesteps[env_id].obs['observation_true'] = timesteps[env_id].obs['observation']
                             timesteps[env_id].obs['observation'] = timesteps[env_id].obs['observation'] + noise.numpy()
 
@@ -788,8 +792,10 @@ class MuZeroAdversaryCollector(ISerialCollector):
                                 game_segments[env_id].reset(observation_window_stack[env_id],
                                                             true_observation_window_stack[env_id])
                             elif self._noise_policy == 'random':
-                                noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
-                                noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                                # noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
+                                # noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                                noise = np.random.uniform(-1 * self._epsilon, self._epsilon, len(init_obs[env_id]['observation']))
+                                noise = torch.Tensor(noise).cpu()
                                 observation_window_stack[env_id] = deque(
                                     [to_ndarray(init_obs[env_id]['observation'] + noise.numpy()) for _ in
                                      range(self.policy_config.model.frame_stack_num)],

@@ -297,8 +297,10 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                                  range(self.policy_config.model.frame_stack_num)])
                     elif self._noise_policy == 'random':
                         for env_id in range(env_nums):
-                            noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
-                            noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                            # noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
+                            # noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                            noise = np.random.uniform(-1 * self._epsilon, self._epsilon, len(init_obs[env_id]['observation']))
+                            noise = torch.Tensor(noise).cpu()
                             game_segments[env_id].reset(
                                 [to_ndarray(init_obs[i]['observation'] + noise.numpy())
                                  for _ in range(self.policy_config.model.frame_stack_num)],
@@ -308,9 +310,12 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
             ready_env_id = set()
             remain_episode = n_episode
 
+            env_step = 0
             with self._timer:
                 while not eval_monitor.is_finished():
                     # Get current ready env obs.
+                    print(env_step)
+                    env_step += 1
                     obs = self._env.ready_obs
                     new_available_env_id = set(obs.keys()).difference(ready_env_id)
                     ready_env_id = ready_env_id.union(set(list(new_available_env_id)[:remain_episode]))
@@ -399,8 +404,10 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                                 timesteps[env_id].obs['observation'] = timesteps[env_id].obs['observation'] + noise.detach().cpu()
                         elif self._noise_policy == 'random':
                             for env_id in timesteps.keys():
-                                noise = np.random.normal(0, 0.001, len(timesteps[env_id].obs['observation']))
-                                noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                                # noise = np.random.normal(0, self._epsilon/3.0, len(timesteps[env_id].obs['observation']))
+                                # noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                                noise = np.random.uniform(-1 * self._epsilon, self._epsilon, len(init_obs[env_id]['observation']))
+                                noise = torch.Tensor(noise).cpu()
                                 timesteps[env_id].obs['observation_true'] = timesteps[env_id].obs['observation']
                                 timesteps[env_id].obs['observation'] = timesteps[env_id].obs[
                                                                            'observation'] + noise.numpy()
@@ -496,8 +503,10 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                                             [to_ndarray(init_obs[i]['observation']) for _ in
                                              range(self.policy_config.model.frame_stack_num)])
                                     elif self._noise_policy == 'random':
-                                        noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
-                                        noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                                        # noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
+                                        # noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                                        noise = np.random.uniform(-1 * self._epsilon, self._epsilon, len(init_obs[env_id]['observation']))
+                                        noise = torch.Tensor(noise).cpu()
                                         game_segments[env_id].reset(
                                             [to_ndarray(init_obs[i]['observation'] + noise.numpy())
                                              for _ in range(self.policy_config.model.frame_stack_num)],
