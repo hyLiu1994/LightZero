@@ -52,7 +52,7 @@ def train_muzero_with_adversary(
 
     cfg, create_cfg = input_cfg
     assert create_cfg.policy.type in ['efficientzero', 'muzero',  'gumbel_muzero', 'stochastic_muzero',
-                                      'sampled_efficientzero', 'sampled_adversary_efficientzero'], \
+                                      'sampled_efficientzero', 'sampled_adversary_efficientzero' ], \
         "train_muzero entry now only support the following algo.: 'efficientzero', 'muzero', 'gumbel_muzero', 'sampled_efficientzero', 'sampled_adversary_efficientzero' "
 
     if create_cfg.policy.type == 'muzero':
