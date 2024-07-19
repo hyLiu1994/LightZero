@@ -98,12 +98,12 @@ f'data_sez_ctree_pytest/{env_id[:-3]}_Muzero_ns{num_simulations}_upc{update_per_
         attack_method='advpolicy',
         ppo_adv_config_path='/root/code/LightZero/ATLA_robust_RL/src/config_hopper_atla_ppo.json',
         attack_advpolicy_network='/root/code/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-hopper.model',
-        Epsilon=0.0075,
+        Epsilon=0.075,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         #------------------------------------------------------------------------------
     ),
     policy_random_adversary=dict(
-        Epsilon=0.0075,
+        Epsilon=0.075,
         noise_policy='random',
     ),
 
