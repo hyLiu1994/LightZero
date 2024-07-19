@@ -19,9 +19,9 @@ reanalyze_ratio = 0.
 
 cartpole_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree/cartpole_sampled_efficientzero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_seed0',
+    f'data_sez_ctree_pytest/cartpole_sampled_efficientzero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_seed0',
     env=dict(
-        env_id='CartPole-v0',
+        env_id='CartPole-v1',
         continuous=False,
         manually_discretization=False,
         collector_env_num=collector_env_num,
@@ -47,8 +47,10 @@ cartpole_sampled_efficientzero_config = dict(
         update_per_collect=update_per_collect,
         batch_size=batch_size,
         optim_type='Adam',
-        lr_piecewise_constant_decay=False,
         learning_rate=0.003,
+        grad_clip_value=0.5,  # 需要小点
+        weight_decay=5e-6,  # 0.01 不太行
+        lr_piecewise_constant_decay=False,
         num_simulations=num_simulations,
         reanalyze_ratio=reanalyze_ratio,
         n_episode=n_episode,

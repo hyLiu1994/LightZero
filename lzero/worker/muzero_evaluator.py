@@ -333,7 +333,7 @@ class MuZeroEvaluator(ISerialEvaluator):
                         # NOTE: the position of code snippet is very important.
                         # the obs['action_mask'] and obs['to_play'] are corresponding to next action
                         action_mask_dict[env_id] = to_ndarray(obs['action_mask'])
-                        to_play_dict[env_id] = to_ndarray(obs['to_play'])
+                        to_play_dict[env_id] = to_ndarray(obs['to_play'].cpu())
 
                         dones[env_id] = done
                         if t.done:

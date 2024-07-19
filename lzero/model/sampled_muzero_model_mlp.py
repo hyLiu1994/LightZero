@@ -11,8 +11,8 @@ from .muzero_model_mlp import DynamicsNetwork
 from .utils import renormalize, get_params_mean
 
 
-@MODEL_REGISTRY.register('AdversarySampledMuZeroModelMLP')
-class AdversarySampledMuZeroModelMLP(nn.Module):
+@MODEL_REGISTRY.register('SampledMuZeroModelMLP')
+class SampledMuZeroModelMLP(nn.Module):
 
     def __init__(
         self,
@@ -90,7 +90,7 @@ class AdversarySampledMuZeroModelMLP(nn.Module):
             - discrete_action_encoding_type (:obj:`str`): The type of encoding for discrete action. Default sets it to 'one_hot'. options = {'one_hot', 'not_one_hot'}
             - res_connection_in_dynamics (:obj:`bool`): Whether to use residual connection for dynamics network, default set it to False.
         """
-        super(AdversarySampledMuZeroModelMLP, self).__init__()
+        super(SampledMuZeroModelMLP, self).__init__()
         if not categorical_distribution:
             self.reward_support_size = 1
             self.value_support_size = 1

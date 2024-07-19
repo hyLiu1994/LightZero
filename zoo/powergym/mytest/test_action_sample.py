@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from torch.distributions import Normal, Independent
 '''
@@ -22,3 +21,21 @@ y = 1 - sampled_actions.pow(2) + 1e-6
 # keep dimension for loss computation (usually for action space is 1 env. e.g. pendulum)
 log_prob = dist.log_prob(sampled_actions_before_tanh).unsqueeze(-1) #[20,] --> [20,1]
 log_prob = log_prob - torch.log(y).sum(-1, keepdim=True)
+
+import torch
+import torch.distributions as dists
+# 创建一个未归一化的Tensor
+unnormalized_probs = torch.randn([2, 2])
+# 使用softmax来归一化这个Tensor，使其成为有效的概率分布
+probs = torch.softmax(unnormalized_probs, dim=1)
+# 创建Categorical分布
+dist = dists.categorical.Categorical(probs=probs)    # dist tensor(1,4) actions tensor(1,) eg: Tensor(3)
+
+actions = torch.Tensor([[1], [0]])
+print(dist.log_prob(actions))
+
+actions = torch.Tensor([1, 0])
+print(dist.log_prob(actions))
+
+if __name__ == '__main__':
+    pass
