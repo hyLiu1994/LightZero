@@ -38,7 +38,7 @@ batch_size = 256
 max_env_step = int(5e8)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
-eval_freq = 50
+eval_freq = 6000
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================

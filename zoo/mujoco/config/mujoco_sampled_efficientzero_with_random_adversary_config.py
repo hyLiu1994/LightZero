@@ -37,7 +37,7 @@ batch_size = 256
 max_env_step = int(5e8)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
-eval_freq = 50
+eval_freq = 6000
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================
@@ -87,11 +87,10 @@ mujoco_sampled_efficientzero_config = dict(
         replay_buffer_size=int(1e6),
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
-        mcts_ctree=True,
         noise_policy = 'random'
     ),
     policy_adversary=dict(
-        action_space='continuous',
+        action_space='continuous',  # discrete
         obs_shape=observation_shape,
         action_shape=action_space_size,
         env_seed=seed,
@@ -100,7 +99,7 @@ mujoco_sampled_efficientzero_config = dict(
         attack_advpolicy_network='/root/code/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-hopper.model',
         Epsilon=0.075,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
-        # ------------------------------------------------------------------------------
+        #---------------------------------------------------------------------
     ),
     policy_random_adversary=dict(
         Epsilon=0.075,
@@ -139,7 +138,7 @@ mujoco_sampled_efficientzero_create_config = EasyDict(mujoco_sampled_efficientze
 create_config = mujoco_sampled_efficientzero_create_config
 
 if __name__ == "__main__":
-    from lzero.entry import train_muzero_with_adversary
-    train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
+    from lzero.entry import train_muzero_with_adversary0 as t
+    t.train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
 
 

@@ -106,7 +106,6 @@ f'data_sez_ctree_pytest/{env_id[:-3]}_Muzero_ns{num_simulations}_upc{update_per_
         #------------------------------------------------------------------------------
     ),
     policy_random_adversary=dict(
-        cuda=True,
         Epsilon=Epsilon,
         noise_policy='random',
     ),
