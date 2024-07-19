@@ -6,5 +6,6 @@ from .train_robustzero import train_robustzero
 from .train_ppo_with_adversary import train_ppo_with_adversary
 from .train_muzero_with_reward_model import train_muzero_with_reward_model
 from .eval_muzero import eval_muzero
+from .eval_muzero_with_adversary import eval_muzero_with_adversary
 from .eval_muzero_with_gym_env import eval_muzero_with_gym_env
 from .train_muzero_with_gym_env import train_muzero_with_gym_env
