@@ -503,8 +503,10 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                                             [to_ndarray(init_obs[i]['observation']) for _ in
                                              range(self.policy_config.model.frame_stack_num)])
                                     elif self._noise_policy == 'random':
-                                        noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
-                                        noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                                        # noise = np.random.normal(0, 0.001, len(init_obs[env_id]['observation']))
+                                        # noise = torch.clamp(torch.Tensor(noise), -1 * self._epsilon, self._epsilon).cpu()
+                                        noise = np.random.uniform(-1 * self._epsilon, self._epsilon, len(init_obs[env_id]['observation']))
+                                        noise = torch.Tensor(noise).cpu()
                                         game_segments[env_id].reset(
                                             [to_ndarray(init_obs[i]['observation'] + noise.numpy())
                                              for _ in range(self.policy_config.model.frame_stack_num)],
