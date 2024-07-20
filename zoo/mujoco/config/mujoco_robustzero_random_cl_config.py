@@ -38,7 +38,7 @@ batch_size = 256
 max_env_step = int(5e8)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
-eval_freq = 50
+eval_freq = 6000
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================
@@ -101,8 +101,8 @@ mujoco_sampled_efficientzero_config = dict(
         action_shape=action_space_size,
         env_seed=seed,
         attack_method='advpolicy',
-        ppo_adv_config_path='/root/code/LightZero/ATLA_robust_RL/src/config_hopper_atla_ppo.json',
-        attack_advpolicy_network='/root/code/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-hopper.model',
+        ppo_adv_config_path='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_hopper_atla_ppo.json',
+        attack_advpolicy_network='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-hopper.model',
         Epsilon=0.075,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         # ------------------------------------------------------------------------------
