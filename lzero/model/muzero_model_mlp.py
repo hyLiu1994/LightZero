@@ -27,6 +27,7 @@ class MuZeroModelMLP(nn.Module):
         pred_hid: int = 512,
         pred_out: int = 1024,
         self_supervised_learning_loss: bool = False,
+        self_supervised_adversary_learning_loss: bool = False,
         categorical_distribution: bool = True,
         activation: Optional[nn.Module] = nn.ReLU(inplace=True),
         last_linear_layer_init_zero: bool = True,
@@ -97,6 +98,7 @@ class MuZeroModelMLP(nn.Module):
         self.pred_hid = pred_hid
         self.pred_out = pred_out
         self.self_supervised_learning_loss = self_supervised_learning_loss
+        self.self_supervised_adversary_learning_loss = self_supervised_adversary_learning_loss
         self.last_linear_layer_init_zero = last_linear_layer_init_zero
         self.state_norm = state_norm
         self.res_connection_in_dynamics = res_connection_in_dynamics
@@ -136,6 +138,19 @@ class MuZeroModelMLP(nn.Module):
                 nn.Linear(self.proj_hid, self.proj_out), nn.BatchNorm1d(self.proj_out)
             )
             self.prediction_head = nn.Sequential(
+                nn.Linear(self.proj_out, self.pred_hid),
+                nn.BatchNorm1d(self.pred_hid),
+                activation,
+                nn.Linear(self.pred_hid, self.pred_out),
+            )
+
+        if self.self_supervised_adversary_learning_loss:
+            projection_robust = nn.Sequential(
+                nn.Linear(self.projection_input_dim, self.proj_hid), nn.BatchNorm1d(self.proj_hid), activation,
+                nn.Linear(self.proj_hid, self.proj_hid), nn.BatchNorm1d(self.proj_hid), activation,
+                nn.Linear(self.proj_hid, self.proj_out), nn.BatchNorm1d(self.proj_out)
+            )
+            self.prediction_head_robust = nn.Sequential(
                 nn.Linear(self.proj_out, self.pred_hid),
                 nn.BatchNorm1d(self.pred_hid),
                 activation,
@@ -317,6 +332,33 @@ class MuZeroModelMLP(nn.Module):
         if with_grad:
             # with grad, use prediction_head
             return self.prediction_head(proj)
+        else:
+            return proj.detach()
+
+    def project_robust(self, latent_state: torch.Tensor, with_grad=True) -> torch.Tensor:
+        """
+        Overview:
+            Project the latent state to a lower dimension to calculate the self-supervised loss, which is proposed in EfficientZero.
+            For more details, please refer to the paper ``Exploring Simple Siamese Representation Learning``.
+        Arguments:
+            - latent_state (:obj:`torch.Tensor`): The encoding latent state of input state.
+            - with_grad (:obj:`bool`): Whether to calculate gradient for the projection result.
+        Returns:
+            - proj (:obj:`torch.Tensor`): The result embedding vector of projection operation.
+        Shapes:
+            - latent_state (:obj:`torch.Tensor`): :math:`(B, H)`, where B is batch_size, H is the dimension of latent state.
+            - proj (:obj:`torch.Tensor`): :math:`(B, projection_output_dim)`, where B is batch_size.
+
+        Examples:
+            >>> latent_state = torch.randn(256, 64)
+            >>> output = self.project(latent_state)
+            >>> output.shape # (256, 1024)
+        """
+        proj = self.projection_robust(latent_state)
+
+        if with_grad:
+            # with grad, use prediction_head
+            return self.prediction_head_robust(proj)
         else:
             return proj.detach()
 
