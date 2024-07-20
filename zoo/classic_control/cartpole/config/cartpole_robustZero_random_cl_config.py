@@ -21,7 +21,7 @@ seed = 0
 
 cartpole_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree_pytest/cartpole_MuZero_with_random_adv_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
+f'data_sez_ctree_pytest/cartpole_RobustZero_with_random_cl_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
     env=dict(
         env_id='CartPole-v1',
         continuous=False,
@@ -95,8 +95,8 @@ cartpole_sampled_efficientzero_create_config = dict(
     ),
     env_manager=dict(type='subprocess'),
     policy=dict(
-        type='sampled_efficientzero',
-        import_names=['lzero.policy.sampled_efficientzero'],
+        type='sampled_adversary_efficientzero',
+        import_names=['lzero.policy.sampled_adversary_efficientzero'],
     ),
 )
 cartpole_sampled_efficientzero_create_config = EasyDict(cartpole_sampled_efficientzero_create_config)
