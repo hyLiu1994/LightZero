@@ -21,7 +21,7 @@ seed = 0
 
 pendulum_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree_pytest/pendulum_MuZero_with_ppo_adv_k{K}_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
+    f'data_sez_ctree_pendulum/pendulum_MuZero_with_ppo_adv_k{K}_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
     env=dict(
         env_id='Pendulum-v1',
         continuous=True,
