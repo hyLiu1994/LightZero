@@ -21,7 +21,7 @@ seed = 0
 
 cartpole_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree_pytest/cartpole_MuZero_with_ppo_adv_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
+    f'data_sez_ctree_pytest/cartpole_RobustZero_with_worst_cl_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
     env=dict(
         env_id='CartPole-v1',
         continuous=False,
@@ -42,7 +42,12 @@ cartpole_sampled_efficientzero_config = dict(
             latent_state_dim=128,
             discrete_action_encoding_type='one_hot',
             norm_type='BN', 
+            self_supervised_learning_loss=True,
+            self_supervised_adversary_learning_loss=True,
         ),
+        # ssl_adversary_loss_weight
+        c3=0.5,
+        #-------------------------
         cuda=True,
         env_type='not_board_games',
         game_segment_length=50,
@@ -90,14 +95,27 @@ cartpole_sampled_efficientzero_create_config = dict(
     ),
     env_manager=dict(type='subprocess'),
     policy=dict(
-        type='sampled_efficientzero',
-        import_names=['lzero.policy.sampled_efficientzero'],
+        type='sampled_adversary_efficientzero',
+        import_names=['lzero.policy.sampled_adversary_efficientzero']
     ),
 )
 cartpole_sampled_efficientzero_create_config = EasyDict(cartpole_sampled_efficientzero_create_config)
 create_config = cartpole_sampled_efficientzero_create_config
 
+model_path_list = [        './data_sez_ctree_cartpole/cartpole_RobustZero_with_worst_cl_ns25_upc100_rr0.0_bs_256_seed_0/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
+'./data_sez_ctree_cartpole/cartpole_RobustZero_with_worst_cl_ns25_upc100_rr0.0_bs_256_seed_0_240721_005350/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
+'./data_sez_ctree_cartpole/cartpole_RobustZero_with_worst_cl_ns25_upc100_rr0.0_bs_256_seed_0_240721_005505/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
+'./data_sez_ctree_cartpole/cartpole_RobustZero_with_worst_cl_ns25_upc100_rr0.0_bs_256_seed_0_240721_005519/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
+'./data_sez_ctree_cartpole/cartpole_RobustZero_with_worst_cl_ns25_upc100_rr0.0_bs_256_seed_0_240721_010047/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar'
+    ]
+
 if __name__ == "__main__":
     # Users can use different train entry by specifying the entry_type.
-    from lzero.entry import train_muzero_with_adversary0 as t
-    t.train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
+    from lzero.entry import eval_muzero_with_adversary 
+    import numpy as np
+    return_list = []
+    for i in range(5):
+        print("seed", i+1)
+        returns_mean, returns, ppo_returns_mean, ppo_returns, random_returns_mean, random_returns = eval_muzero_with_adversary([main_config, create_config], seed=seed, model_path=model_path_list[i], num_episodes_each_seed=1, print_seed_details=False)
+        return_list.append([returns_mean, np.std(returns), ppo_returns_mean, np.std(ppo_returns), random_returns_mean, np.std(random_returns)])
+        print(return_list)

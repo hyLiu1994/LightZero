@@ -310,12 +310,12 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
             ready_env_id = set()
             remain_episode = n_episode
 
-            env_step = 0
+            # env_step = 0
             with self._timer:
                 while not eval_monitor.is_finished():
                     # Get current ready env obs.
-                    print(env_step)
-                    env_step += 1
+                    # print(env_step)
+                    # env_step += 1
                     obs = self._env.ready_obs
                     new_available_env_id = set(obs.keys()).difference(ready_env_id)
                     ready_env_id = ready_env_id.union(set(list(new_available_env_id)[:remain_episode]))
