@@ -72,12 +72,12 @@ pendulum_sampled_efficientzero_config = dict(
     ),
     policy_adversary=dict(
         action_space='continuous',
-        obs_shape=4,
-        action_shape=2,
+        obs_shape=3,
+        action_shape=11,
         env_seed=seed,
         attack_method='advpolicy',
-        ppo_adv_config_path='/root/code/LightZero/ATLA_robust_RL/src/config_pendulum_atla_ppo.json',
-        attack_advpolicy_network='/root/code/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-pendulum.model',
+        ppo_adv_config_path='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_pendulum_atla_ppo.json',
+        attack_advpolicy_network='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-pendulum.model',
         Epsilon=0.075,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         # ---------------------------------------------------------------------
