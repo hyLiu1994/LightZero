@@ -68,8 +68,8 @@ cartpole_sampled_efficientzero_config = dict(
         action_shape=2,
         env_seed=seed,
         attack_method='advpolicy',
-        ppo_adv_config_path='/root/code/LightZero/ATLA_robust_RL/src/config_cartpole_atla_ppo.json',
-        attack_advpolicy_network='/root/code/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-cartpole.model',
+        ppo_adv_config_path='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_cartpole_atla_ppo.json',
+        attack_advpolicy_network='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-cartpole.model',
         Epsilon=0.075,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         # ---------------------------------------------------------------------
