@@ -8,7 +8,7 @@ n_episode = 8
 evaluator_env_num = 3
 continuous_action_space = False
 K = 2  # num_of_sampled_actions
-num_simulations = 25
+num_simulations = 400
 update_per_collect = 100
 batch_size = 256
 max_env_step = int(1e5)
@@ -21,7 +21,7 @@ seed = 0
 
 cartpole_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree_pytest/cartpole_RobustZero_with_worst_cl_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
+    f'data_sez_ctree_cartpole/cartpole_RobustZero_with_worst_cl_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
     env=dict(
         env_id='CartPole-v1',
         continuous=False,
