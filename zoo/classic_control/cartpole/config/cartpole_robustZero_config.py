@@ -8,7 +8,7 @@ n_episode = 8
 evaluator_env_num = 3
 continuous_action_space = False
 K = 2  # num_of_sampled_actions
-num_simulations = 400
+num_simulations = 50
 update_per_collect = 100
 batch_size = 256
 max_env_step = int(1e5)
@@ -76,13 +76,13 @@ cartpole_sampled_efficientzero_config = dict(
         env_seed=seed,
         attack_method='advpolicy',
         ppo_adv_config_path='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_cartpole_atla_ppo.json',
-        attack_advpolicy_network='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-cartpole.model',
-        Epsilon=0.075,
+        attack_advpolicy_network='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-cartpole-eps0.15-no-norm.model',
+        Epsilon=0.15,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         # ---------------------------------------------------------------------
     ),
     policy_random_adversary=dict(
-        Epsilon=0.075,
+        Epsilon=0.15,
         noise_policy='random',
     ),
 )
