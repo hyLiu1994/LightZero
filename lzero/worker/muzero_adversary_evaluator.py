@@ -285,7 +285,7 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                                                          range(self.policy_config.model.frame_stack_num)])
                     elif self._noise_policy == 'ppo':
                         stack_obs = {env_id: init_obs[env_id]['observation'] for env_id in range(env_nums)}
-                        stacked_tensor = torch.stack([torch.tensor(stack_obs[key]) for key in range(env_nums)]).to(self.policy_config.device)
+                        stacked_tensor = torch.stack([torch.tensor(stack_obs[key]) for key in range(env_nums)]).float().to(self.policy_config.device)
                         perturbations_mean = self.pretrained_ppo_adversary.apply_ppo_attack(stacked_tensor)
                         for env_id in range(env_nums):
                             # Clamp using tanh.
