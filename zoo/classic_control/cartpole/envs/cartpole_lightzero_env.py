@@ -9,6 +9,7 @@ from ding.envs import ObsPlusPrevActRewWrapper
 from ding.torch_utils import to_ndarray
 from ding.utils import ENV_REGISTRY
 from easydict import EasyDict
+from ding.envs import ObsNormWrapper
 
 
 @ENV_REGISTRY.register('cartpole_lightzero')
@@ -71,6 +72,9 @@ class CartPoleEnv(BaseEnv):
             if hasattr(self._cfg, 'obs_plus_prev_action_reward') and self._cfg.obs_plus_prev_action_reward:
                 self._env = ObsPlusPrevActRewWrapper(self._env)
             self._init_flag = True
+            if hasattr(self._cfg, 'obs_norm') and self._cfg.obs_norm:
+                self._env = ObsNormWrapper(self._env)
+
         if hasattr(self, '_seed') and hasattr(self, '_dynamic_seed') and self._dynamic_seed:
             np_seed = 100 * np.random.randint(1, 1000)
             self._seed = self._seed + np_seed
