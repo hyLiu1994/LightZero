@@ -97,7 +97,20 @@ cartpole_sampled_efficientzero_create_config = dict(
 cartpole_sampled_efficientzero_create_config = EasyDict(cartpole_sampled_efficientzero_create_config)
 create_config = cartpole_sampled_efficientzero_create_config
 
+model_path_list = [        './data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns25_upc100_rr0.0_bs_256_seed_0_240721_065734/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
+'./data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns25_upc100_rr0.0_bs_256_seed_0_240721_071254/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
+'./data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns25_upc100_rr0.0_bs_256_seed_0_240721_073946/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
+'./data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns25_upc100_rr0.0_bs_256_seed_0_240721_075423/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
+'./data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns25_upc100_rr0.0_bs_256_seed_0_240721_083313/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar'
+    ]
+
 if __name__ == "__main__":
     # Users can use different train entry by specifying the entry_type.
-    from lzero.entry import train_muzero_with_adversary0 as t
-    t.train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
+    from lzero.entry import eval_muzero_with_adversary 
+    import numpy as np
+    return_list = []
+    for i in range(5):
+        print("seed", i+1)
+        returns_mean, returns, ppo_returns_mean, ppo_returns, random_returns_mean, random_returns = eval_muzero_with_adversary([main_config, create_config], seed=seed, model_path=model_path_list[i], num_episodes_each_seed=1, print_seed_details=False)
+        return_list.append([returns_mean, np.std(returns), ppo_returns_mean, np.std(ppo_returns), random_returns_mean, np.std(random_returns)])
+        print(return_list)

@@ -40,7 +40,7 @@ def eval_muzero_with_adversary(
         - policy (:obj:`Policy`): Converged policy.
     """
     cfg, create_cfg = input_cfg
-    assert create_cfg.policy.type in ['efficientzero', 'muzero', 'stochastic_muzero', 'gumbel_muzero', 'sampled_efficientzero'], \
+    assert create_cfg.policy.type in ['robustzero', 'sampled_adversary_efficientzero', 'efficientzero', 'muzero', 'stochastic_muzero', 'gumbel_muzero', 'sampled_efficientzero'], \
         "LightZero now only support the following algo.: 'efficientzero', 'muzero', 'stochastic_muzero', 'gumbel_muzero', 'sampled_efficientzero'"
 
     if cfg.policy.cuda and torch.cuda.is_available():
@@ -135,15 +135,15 @@ def eval_muzero_with_adversary(
         for i in range(num_episodes_each_seed):
             stop_flag, episode_info = random_evaluator.eval(learner.save_checkpoint, learner.train_iter)
             random_returns.append(episode_info['eval_episode_return'])
-            print("random_returns", random_returns)
+            # print("random_returns", random_returns)
 
             stop_flag, episode_info = ppo_evaluator.eval(learner.save_checkpoint, learner.train_iter)
             ppo_returns.append(episode_info['eval_episode_return'])
-            print("ppo_returns", ppo_returns)
+            # print("ppo_returns", ppo_returns)
 
             stop_flag, episode_info = evaluator.eval(learner.save_checkpoint, learner.train_iter)
             returns.append(episode_info['eval_episode_return'])
-            print("returns", returns)
+            # print("returns", returns)
 
 
 
@@ -165,4 +165,4 @@ def eval_muzero_with_adversary(
             print_seed_details_func(ppo_returns, "ppo_returns")
             print_seed_details_func(random_returns, "random_returns")
 
-        return returns.mean(), returns
+        return returns.mean(), returns, ppo_returns.mean(), ppo_returns, random_returns.mean(), random_returns

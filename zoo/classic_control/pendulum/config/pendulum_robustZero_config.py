@@ -11,7 +11,7 @@ evaluator_env_num = 3
 num_simulations = 50
 update_per_collect = 200
 batch_size = 256
-max_env_step = int(1e6)
+max_env_step = int(2e5)
 reanalyze_ratio = 0.
 eval_freq = 200
 seed = 0
@@ -21,7 +21,7 @@ seed = 0
 
 pendulum_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree_pytest/pendulum_RobustZero_k{K}_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
+    f'data_sez_ctree_pendulum/pendulum_RobustZero_k{K}_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
     env=dict(
         env_id='Pendulum-v1',
         continuous=True,
@@ -72,12 +72,12 @@ pendulum_sampled_efficientzero_config = dict(
     ),
     policy_adversary=dict(
         action_space='continuous',
-        obs_shape=4,
-        action_shape=2,
+        obs_shape=3,
+        action_shape=11,
         env_seed=seed,
         attack_method='advpolicy',
-        ppo_adv_config_path='/root/code/LightZero/ATLA_robust_RL/src/config_pendulum_atla_ppo.json',
-        attack_advpolicy_network='/root/code/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-pendulum.model',
+        ppo_adv_config_path='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_pendulum_atla_ppo.json',
+        attack_advpolicy_network='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-pendulum.model',
         Epsilon=0.075,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         # ---------------------------------------------------------------------
