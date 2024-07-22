@@ -38,7 +38,7 @@ eval_freq = 50
 
 powergym_sampled_efficientzero_config = dict(
     exp_name=
-f'data_sez_ctree/IEEE13_{env_id}_MuZero_with_ppo_adversary_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+f'data_sez_ctree/IEEE13_{env_id}_sampled_efficientZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -81,25 +81,7 @@ f'data_sez_ctree/IEEE13_{env_id}_MuZero_with_ppo_adversary_ns{num_simulations}_u
         replay_buffer_size=int(1e6),
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
-        noise_policy = 'ppo'
     ),
-    policy_adversary=dict(
-        action_space='continuous',
-        obs_shape=observation_shape,
-        action_shape=action_space_size,
-        env_seed=seed,
-        attack_method='advpolicy',
-        ppo_adv_config_path=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_{env_id}_atla_ppo.json',
-        attack_advpolicy_network=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-{env_id}.model',
-        Epsilon=0.075,
-        noise_policy='ppo',  # 'atla_ppo' 'ppo'
-        # ------------------------------------------------------------------------------
-    ),
-    policy_random_adversary=dict(
-        Epsilon=0.075,
-        noise_policy='random',
-    ),
-
 )
 
 powergym_sampled_efficientzero_config = EasyDict(powergym_sampled_efficientzero_config)
@@ -114,25 +96,14 @@ powergym_sampled_efficientzero_create_config = dict(
     policy=dict(
         type='sampled_efficientzero',
         import_names=['lzero.policy.sampled_efficientzero'],
-        # learner=dict(
-        #     train_iterations=int(1e4),
-        #     dataloader=dict(num_workers=0, ),
-        #     log_policy=True,
-        #     hook=dict(
-        #         load_ckpt_before_run='',
-        #         log_show_after_iter=100,
-        #         save_ckpt_after_iter=10000,
-        #         save_ckpt_after_run=True,
-        #     ),
-        # ),
     ),
-    # policy_adversary=dict(type='ppo'),
+
 )
 powergym_sampled_efficientzero_create_config = EasyDict(powergym_sampled_efficientzero_create_config)
 create_config = powergym_sampled_efficientzero_create_config
 
 if __name__ == "__main__":
-    from lzero.entry import train_muzero_with_adversary0 as t
-    t.train_muzero_with_adversary([main_config, create_config], seed=seed, max_env_step=max_env_step)
+    from lzero.entry import train_muzero
+    train_muzero([main_config, create_config], seed=seed, max_env_step=max_env_step)
 
 
