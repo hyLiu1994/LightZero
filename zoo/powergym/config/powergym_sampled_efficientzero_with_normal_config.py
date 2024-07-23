@@ -22,8 +22,8 @@ n_episode = 3
 collector_env_num = 3 # 不要变动,若要变动, 只能往小值变小.
 evaluator_env_num = 2
 continuous_action_space = True
-K = 20  # num_of_sampled_actions
-num_simulations = 50
+K = 50  # num_of_sampled_actions
+num_simulations = 125
 update_per_collect = 200
 batch_size = 256
 
