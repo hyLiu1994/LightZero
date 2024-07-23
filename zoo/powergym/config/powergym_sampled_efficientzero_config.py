@@ -1,7 +1,5 @@
 from easydict import EasyDict
 import zoo.powergym.env_manager.power_gym_subprocess_env_manager
-import warnings
-warnings.filterwarnings("ignore",category=DeprecationWarning)
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # options={'13Bus', '34Bus', '123Bus', '8500-Node'}
@@ -24,10 +22,10 @@ n_episode = 3
 collector_env_num = 3 # 不要变动,若要变动, 只能往小值变小.
 evaluator_env_num = 2
 continuous_action_space = True
-K = 20  # num_of_sampled_actions
-num_simulations = 50
+K = 50  # num_of_sampled_actions
+num_simulations = 125
 update_per_collect = 200
-batch_size = 128
+batch_size = 256
 
 
 max_env_step = int(5e8)
@@ -40,7 +38,7 @@ eval_freq = 50
 
 powergym_sampled_efficientzero_config = dict(
     exp_name=
-f'/root/code/LightZero/data_sez_ctree_pytest/IEEE13_{env_id}_sampled_efficientZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+f'data_sez_ctree_pytest/IEEE13_{env_id}_sampled_efficientZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,

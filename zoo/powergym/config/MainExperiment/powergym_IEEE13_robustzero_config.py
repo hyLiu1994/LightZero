@@ -19,8 +19,8 @@ ignore_done = False
 # begin of the most frequently changed config specified by the user
 # ==============================================================
 seed = 0
-n_episode = 2
-collector_env_num = 2 # 不要变动,若要变动, 只能往小值变小.
+n_episode = 3
+collector_env_num = 3 # 不要变动,若要变动, 只能往小值变小.
 evaluator_env_num = 2
 continuous_action_space = True
 K = 20  # num_of_sampled_actions
