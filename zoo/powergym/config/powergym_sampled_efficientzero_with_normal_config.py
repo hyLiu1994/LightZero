@@ -3,7 +3,7 @@ import zoo.powergym.env_manager.power_gym_subprocess_env_manager
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # options={'13Bus', '34Bus', '123Bus', '8500-Node'}
-env_id = '13Bus'
+env_id = '34Bus'
 
 if env_id == '13Bus':
     action_space_size = 6
@@ -89,14 +89,14 @@ f'data_sez_ctree/IEEE13_{env_id}_Muzero_ns{num_simulations}_upc{update_per_colle
         action_shape=action_space_size,
         env_seed=seed,
         attack_method='advpolicy',
-        ppo_adv_config_path=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_{env_id}_atla_ppo.json',
-        attack_advpolicy_network=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-{env_id}.model',
-        Epsilon=0.075,
+        ppo_adv_config_path=f'/root/code/LightZero/ATLA_robust_RL/src/config_{env_id}_atla_ppo.json',
+        attack_advpolicy_network=f'/root/code/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-{env_id}-eps0.15-no-norm.model',
+        Epsilon=0.15,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         # ------------------------------------------------------------------------------
     ),
     policy_random_adversary=dict(
-        Epsilon=0.075,
+        Epsilon=0.15,
         noise_policy='random',
     ),
 
