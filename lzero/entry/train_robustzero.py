@@ -21,7 +21,8 @@ from lzero.worker import MuZeroAdversaryCollector as Collector
 from lzero.worker import MuZeroAdversaryEvaluator as Evaluator
 from lzero.worker import MuZeroEvaluator as muZeroEvaluator
 from .utils import random_collect
-
+import warnings
+warnings.filterwarnings("ignore",category=DeprecationWarning)
 
 
 def train_robustzero(

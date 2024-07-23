@@ -48,7 +48,7 @@
     "norm_states": false,
     "num_actors": 1,
     "num_minibatches": 32,
-      "out_dir": "/root/code/ATLA_robust_RL/atla_ppo_34Bus/agents/atla_ppo_13Bus/agents",
+      "out_dir": "/root/code/ATLA_robust_RL/atla_ppo_34Bus/agents",
     "policy_activation": "tanh",
     "policy_net_type": "CtsPolicy",
     "ppo_epochs": 10,
