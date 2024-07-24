@@ -110,6 +110,7 @@ class LoadProfile:
                 
                 load_file = list(filter(None, line.strip().split(' ')))[1]
                 break
+        fin.close()
         return load_file
 
     def find_load_names(self, main_dss):

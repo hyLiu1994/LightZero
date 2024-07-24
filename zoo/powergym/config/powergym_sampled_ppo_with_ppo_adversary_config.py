@@ -1,7 +1,7 @@
 from easydict import EasyDict
 import zoo.powergym.env_manager.power_gym_subprocess_env_manager
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # options={'13Bus', '34Bus', '123Bus', '8500-Node'}
 env_id = '13Bus'
 
@@ -20,18 +20,17 @@ ignore_done = False
 seed = 0
 n_episode = 3
 collector_env_num = 3 # 不要变动,若要变动, 只能往小值变小.
-evaluator_env_num = 1
+evaluator_env_num = 2
 continuous_action_space = True
 K = 20  # num_of_sampled_actions
 num_simulations = 50
 update_per_collect = 200
 batch_size = 256
-eval_freq = 50
 
 max_env_step = int(5e6)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
-
+eval_freq = 50
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================
@@ -88,7 +87,7 @@ f'data_sez_ctree/{env_id}_PPO_with_ppo_adversary_ns{num_simulations}_upc{update_
         cuda=True,
         recompute_adv=True,
         action_space='continuous',
-        Epsilon=0.0075,
+        Epsilon=0.075,
         noise_policy='ppo',
         model=dict(
             obs_shape=observation_shape,
@@ -122,23 +121,8 @@ f'data_sez_ctree/{env_id}_PPO_with_ppo_adversary_ns{num_simulations}_upc{update_
         eval=dict(evaluator=dict(eval_freq=eval_freq, )),
     ),
     policy_random_adversary=dict(
-        cuda=True,
-        # recompute_adv=True,
-        # action_space='continuous',
-        Epsilon=0.0075,
+        Epsilon=0.075,
         noise_policy='random',
-        # model=dict(
-        #     obs_shape=observation_shape,
-        #     action_shape=observation_shape,
-        #     action_space='continuous',
-        # ),
-        # collect=dict(
-        #     n_sample=3200,
-        #     unroll_len=1,
-        #     discount_factor=0.99,
-        #     gae_lambda=0.95,
-        # ),
-        # eval=dict(evaluator=dict(eval_freq=500, )),
     ),
 
 )
@@ -155,17 +139,17 @@ powergym_sampled_ppo_create_config = dict(
     policy=dict(
         type='sampled_ppo',
         import_names=['lzero.policy.sampled_ppo'],
-        learner=dict(
-            train_iterations=int(1e4),
-            dataloader=dict(num_workers=0, ),
-            log_policy=True,
-            hook=dict(
-                load_ckpt_before_run='',
-                log_show_after_iter=100,
-                save_ckpt_after_iter=10000,
-                save_ckpt_after_run=True,
-            ),
-        ),
+        # learner=dict(
+        #     train_iterations=int(1e4),
+        #     dataloader=dict(num_workers=0, ),
+        #     log_policy=True,
+        #     hook=dict(
+        #         load_ckpt_before_run='',
+        #         log_show_after_iter=100,
+        #         save_ckpt_after_iter=10000,
+        #         save_ckpt_after_run=True,
+        #     ),
+        # ),
     ),
     policy_adversary=dict(type='ppo'),
 )

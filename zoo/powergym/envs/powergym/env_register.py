@@ -297,6 +297,7 @@ def make_env(env_name, dss_act=False, worker_idx=None):
                     fout.write('redirect loadshape_' + str(worker_idx) + '.dss\n')
                 else:
                     fout.write(line)
+        fin.close()
         info = base_info.copy()
         info['dss_file'] = info['dss_file'][:-4] + '_' + str(worker_idx) + '.dss'
         info['worker_idx'] = worker_idx

@@ -412,15 +412,10 @@ class Trainer(object):
 
 
     def apply_ppo_attack(self, last_states):
-        eps = self.params.ATTACK_EPS
-        if eps == "same":
-            eps = self.params.ROBUST_PPO_EPS
-        else:
-            eps = float(eps)
         if self.params.ATTACK_METHOD == "random":
             # Apply an uniform random noise.
-            noise = torch.empty_like(last_states).uniform_(-eps, eps)
-            return (last_states + noise).detach()
+            # noise = torch.empty_like(last_states).uniform_(-eps, eps)
+            return last_states.detach()
         elif self.params.ATTACK_METHOD == "advpolicy":
             # Attack using a learned policy network.
             assert self.params.ATTACK_ADVPOLICY_NETWORK is not None

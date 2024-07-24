@@ -539,16 +539,12 @@ class PowerGymAsyncSubprocessEnvManager(BaseEnvManager):
             env_fn.keywords['cfg']['work_idx'] = 3 + env_id
         elif env_fn.keywords['cfg']['env_type'] == 'random_collector':
             env_fn.keywords['cfg']['work_idx'] = 6 + env_id
-        elif env_fn.keywords['cfg']['env_type'] == 'ppo_adversary_collector':
-            env_fn.keywords['cfg']['work_idx'] = 9 + env_id
         elif env_fn.keywords['cfg']['env_type'] == 'normal_evaluator':
-            env_fn.keywords['cfg']['work_idx'] = 12 + env_id
+            env_fn.keywords['cfg']['work_idx'] = 9 + env_id
         elif env_fn.keywords['cfg']['env_type'] == 'ppo_evaluator':
-            env_fn.keywords['cfg']['work_idx'] = 13 + env_id
+            env_fn.keywords['cfg']['work_idx'] = 11 + env_id
         elif env_fn.keywords['cfg']['env_type'] == 'random_evaluator':
-            env_fn.keywords['cfg']['work_idx'] = 14 + env_id
-        elif env_fn.keywords['cfg']['env_type'] == 'ppo_adversary_evaluator':
-            env_fn.keywords['cfg']['work_idx'] = 15 + env_id
+            env_fn.keywords['cfg']['work_idx'] = 13 + env_id
 
 
         env = env_fn()

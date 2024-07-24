@@ -1,5 +1,6 @@
 import logging
 import os
+from copy import deepcopy
 from functools import partial
 from typing import Optional, Tuple
 
@@ -19,7 +20,8 @@ from lzero.policy.random_policy import LightZeroRandomPolicy
 from lzero.worker import MuZeroCollector as Collector
 from lzero.worker import MuZeroEvaluator as Evaluator
 from .utils import random_collect
-
+import warnings
+warnings.filterwarnings("ignore",category=DeprecationWarning)
 
 def train_muzero(
         input_cfg: Tuple[dict, dict],
@@ -70,8 +72,13 @@ def train_muzero(
     # Create main components: env, policy
     env_fn, collector_env_cfg, evaluator_env_cfg = get_vec_env_setting(cfg.env)
 
-    collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in collector_env_cfg])
-    evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
+    normal_collector_env_cfg = deepcopy(collector_env_cfg)
+    [nc.__setattr__('env_type', 'normal_collector') for nc in normal_collector_env_cfg]
+    normal_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
+    [ne.__setattr__('env_type', 'normal_evaluator') for ne in normal_evaluator_env_cfg]
+
+    collector_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in normal_collector_env_cfg])
+    evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in normal_evaluator_env_cfg])
 
     collector_env.seed(cfg.seed)
     evaluator_env.seed(cfg.seed, dynamic_seed=False)

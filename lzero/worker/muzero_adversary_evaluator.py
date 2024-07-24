@@ -285,7 +285,7 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                                                          range(self.policy_config.model.frame_stack_num)])
                     elif self._noise_policy == 'ppo':
                         stack_obs = {env_id: init_obs[env_id]['observation'] for env_id in range(env_nums)}
-                        stacked_tensor = torch.stack([torch.tensor(stack_obs[key]) for key in range(env_nums)]).to(self.policy_config.device)
+                        stacked_tensor = torch.stack([torch.tensor(stack_obs[key]) for key in range(env_nums)]).float().to(self.policy_config.device)
                         perturbations_mean = self.pretrained_ppo_adversary.apply_ppo_attack(stacked_tensor)
                         for env_id in range(env_nums):
                             # Clamp using tanh.
@@ -310,12 +310,13 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
             ready_env_id = set()
             remain_episode = n_episode
 
-            # env_step = 0
+            env_step = 0
             with self._timer:
                 while not eval_monitor.is_finished():
                     # Get current ready env obs.
-                    # print(env_step)
-                    # env_step += 1
+                    if (env_step % 50 == 0):
+                        print(env_step)
+                    env_step += 1
                     obs = self._env.ready_obs
                     new_available_env_id = set(obs.keys()).difference(ready_env_id)
                     ready_env_id = ready_env_id.union(set(list(new_available_env_id)[:remain_episode]))

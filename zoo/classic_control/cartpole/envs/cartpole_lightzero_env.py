@@ -10,6 +10,162 @@ from ding.torch_utils import to_ndarray
 from ding.utils import ENV_REGISTRY
 from easydict import EasyDict
 
+class RunningMeanStd(object):
+    """
+    Overview:
+       The RunningMeanStd class is a utility that maintains a running mean and standard deviation calculation over
+        a stream of data.
+    Interfaces:
+        __init__, update, reset, mean, std
+    Properties:
+        - mean (:obj:`np.ndarray`): The running mean.
+        - std (:obj:`np.ndarray`): The running standard deviation.
+        - _epsilon (:obj:`float`): A small number to prevent division by zero when calculating standard deviation.
+        - _shape (:obj:`tuple`): The shape of the data stream.
+        - _mean (:obj:`np.ndarray`): The current mean of the data stream.
+        - _var (:obj:`np.ndarray`): The current variance of the data stream.
+        - _count (:obj:`float`): The number of data points processed.
+    """
+
+    def __init__(self, epsilon: float = 1e-4, shape: tuple = ()):
+        """
+        Overview:
+            Initialize the RunningMeanStd object.
+        Arguments:
+            - epsilon (:obj:`float`, optional): A small number to prevent division by zero when calculating standard
+                deviation. Default is 1e-4.
+            - shape (:obj:`tuple`, optional): The shape of the data stream. Default is an empty tuple, which
+                corresponds to scalars.
+        """
+        self._epsilon = epsilon
+        self._shape = shape
+        self.reset()
+
+    def update(self, x: np.array):
+        """
+        Overview:
+            Update the running statistics with a new batch of data.
+        Arguments:
+            - x (:obj:`np.array`): A batch of data.
+        """
+        batch_mean = np.mean(x, axis=0)
+        batch_var = np.var(x, axis=0)
+        batch_count = x.shape[0]
+
+        new_count = batch_count + self._count
+        mean_delta = batch_mean - self._mean
+        new_mean = self._mean + mean_delta * batch_count / new_count
+        # this method for calculating new variable might be numerically unstable
+        m_a = self._var * self._count
+        m_b = batch_var * batch_count
+        m2 = m_a + m_b + np.square(mean_delta) * self._count * batch_count / new_count
+        new_var = m2 / new_count
+        self._mean = new_mean
+        self._var = new_var
+        self._count = new_count
+
+    def reset(self):
+        """
+        Overview:
+            Resets the state of the environment and reset properties:  \
+                ``_mean``, ``_var``, ``_count``
+        """
+        self._mean = np.zeros(self._shape, 'float64')
+        self._var = np.ones(self._shape, 'float64')
+        self._count = self._epsilon
+
+    @property
+    def mean(self) -> np.ndarray:
+        """
+        Overview:
+            Get the current running mean.
+        Returns:
+            The current running mean.
+        """
+        return self._mean
+
+    @property
+    def std(self) -> np.ndarray:
+        """
+        Overview:
+            Get the current running standard deviation.
+        Returns:
+            The current running mean.
+        """
+        return np.sqrt(self._var) + self._epsilon
+
+class ObsNormWrapper(gym.ObservationWrapper):
+    """
+    Overview:
+        The ObsNormWrapper class is a gym observation wrapper that normalizes
+        observations according to running mean and standard deviation (std).
+    Interfaces:
+        __init__, step, reset, observation
+    Properties:
+        - env (:obj:`gym.Env`): the environment to wrap.
+        - data_count (:obj:`int`): the count of data points observed so far.
+        - clip_range (:obj:`Tuple[int, int]`): the range to clip the normalized observation.
+        - rms (:obj:`RunningMeanStd`): running mean and standard deviation of the observations.
+    """
+
+    def __init__(self, env: gym.Env):
+        """
+        Overview:
+            Initialize the ObsNormWrapper class.
+        Arguments:
+            - env (:obj:`gym.Env`): the environment to wrap.
+        """
+        super().__init__(env)
+        self.data_count = 0
+        self.clip_range = (-3, 3)
+        self.rms = RunningMeanStd(shape=env.observation_space.shape)
+
+    def step(self, action: Union[int, np.ndarray]):
+        """
+        Overview:
+            Take an action in the environment, update the running mean and std,
+            and return the normalized observation.
+        Arguments:
+            - action (:obj:`Union[int, np.ndarray]`): the action to take in the environment.
+        Returns:
+            - obs (:obj:`np.ndarray`): the normalized observation after the action.
+            - reward (:obj:`float`): the reward after the action.
+            - done (:obj:`bool`): whether the episode has ended.
+            - info (:obj:`Dict`): contains auxiliary diagnostic information.
+        """
+        self.data_count += 1
+        obs, rew, terminated, truncated, info = self.env.step(action)
+        self.rms.update(obs)
+        return self.observation(obs), rew, terminated, truncated, info
+
+    def observation(self, observation: np.ndarray) -> np.ndarray:
+        """
+        Overview:
+            Normalize the observation using the current running mean and std.
+            If less than 30 data points have been observed, return the original observation.
+        Arguments:
+            - observation (:obj:`np.ndarray`): the original observation.
+        Returns:
+            - observation (:obj:`np.ndarray`): the normalized observation.
+        """
+        if self.data_count > 30:
+            return np.clip((observation - self.rms.mean) / self.rms.std, self.clip_range[0], self.clip_range[1])
+        else:
+            return observation
+
+    def reset(self, **kwargs):
+        """
+        Overview:
+            Reset the environment and the properties related to the running mean and std.
+        Arguments:
+            - kwargs (:obj:`Dict`): keyword arguments to be passed to the environment's reset function.
+        Returns:
+            - observation (:obj:`np.ndarray`): the initial observation of the environment.
+        """
+        # self.data_count = 0
+        # self.rms.reset()
+        observation = self.env.reset(**kwargs)
+        return (self.observation(observation[0]), observation[1])
 
 @ENV_REGISTRY.register('cartpole_lightzero')
 class CartPoleEnv(BaseEnv):
@@ -71,6 +227,9 @@ class CartPoleEnv(BaseEnv):
             if hasattr(self._cfg, 'obs_plus_prev_action_reward') and self._cfg.obs_plus_prev_action_reward:
                 self._env = ObsPlusPrevActRewWrapper(self._env)
             self._init_flag = True
+            if hasattr(self._cfg, 'obs_norm') and self._cfg.obs_norm:
+                self._env = ObsNormWrapper(self._env)
+
         if hasattr(self, '_seed') and hasattr(self, '_dynamic_seed') and self._dynamic_seed:
             np_seed = 100 * np.random.randint(1, 1000)
             self._seed = self._seed + np_seed

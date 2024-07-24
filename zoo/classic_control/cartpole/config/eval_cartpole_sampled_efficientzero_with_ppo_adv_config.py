@@ -5,10 +5,10 @@ from easydict import EasyDict
 # ==============================================================
 collector_env_num = 8
 n_episode = 8
-evaluator_env_num = 3
+evaluator_env_num = 50
 continuous_action_space = False
 K = 2  # num_of_sampled_actions
-num_simulations = 25
+num_simulations = 50
 update_per_collect = 100
 batch_size = 256
 max_env_step = int(1e5)
@@ -21,7 +21,7 @@ seed = 0
 
 cartpole_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree_pytest/cartpole_MuZero_with_ppo_adv_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
+    f'data_sez_ctree_cartpole_eval/cartpole_MuZero_with_ppo_adv_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
     env=dict(
         env_id='CartPole-v1',
         continuous=False,
@@ -69,13 +69,13 @@ cartpole_sampled_efficientzero_config = dict(
         env_seed=seed,
         attack_method='advpolicy',
         ppo_adv_config_path='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_cartpole_atla_ppo.json',
-        attack_advpolicy_network='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-cartpole.model',
-        Epsilon=0.075,
+        attack_advpolicy_network='/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-cartpole-eps0.15-no-norm.model',
+        Epsilon=0.15,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         # ---------------------------------------------------------------------
     ),
     policy_random_adversary=dict(
-        Epsilon=0.075,
+        Epsilon=0.15,
         noise_policy='random',
     ),
 )
@@ -97,11 +97,9 @@ cartpole_sampled_efficientzero_create_config = dict(
 cartpole_sampled_efficientzero_create_config = EasyDict(cartpole_sampled_efficientzero_create_config)
 create_config = cartpole_sampled_efficientzero_create_config
 
-model_path_list = [        './data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns25_upc100_rr0.0_bs_256_seed_0_240721_065734/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
-'./data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns25_upc100_rr0.0_bs_256_seed_0_240721_071254/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
-'./data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns25_upc100_rr0.0_bs_256_seed_0_240721_073946/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
-'./data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns25_upc100_rr0.0_bs_256_seed_0_240721_075423/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
-'./data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns25_upc100_rr0.0_bs_256_seed_0_240721_083313/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar'
+model_path_list = [        './data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns50_upc100_rr0.0_bs_256_seed_0_240723_064007/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
+'./data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns50_upc100_rr0.0_bs_256_seed_0_240723_070545/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar',
+'./data_sez_ctree_cartpole/cartpole_MuZero_with_ppo_adv_ns50_upc100_rr0.0_bs_256_seed_0_240723_071745/ckpt_agent_learner/ckpt_best_agent_evaluator_with_ppo.pth.tar'
     ]
 
 if __name__ == "__main__":
@@ -109,7 +107,7 @@ if __name__ == "__main__":
     from lzero.entry import eval_muzero_with_adversary 
     import numpy as np
     return_list = []
-    for i in range(5):
+    for i in range(3):
         print("seed", i+1)
         returns_mean, returns, ppo_returns_mean, ppo_returns, random_returns_mean, random_returns = eval_muzero_with_adversary([main_config, create_config], seed=seed, model_path=model_path_list[i], num_episodes_each_seed=1, print_seed_details=False)
         return_list.append([returns_mean, np.std(returns), ppo_returns_mean, np.std(ppo_returns), random_returns_mean, np.std(random_returns)])
