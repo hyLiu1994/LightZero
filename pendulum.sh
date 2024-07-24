@@ -1,0 +1,6 @@
+# python zoo/classic_control/pendulum/config/pendulum_cont_sampled_efficientzero_with_normal_config.py
+# python zoo/classic_control/pendulum/config/pendulum_cont_sampled_efficientzero_with_random_adv_config.py
+# python zoo/classic_control/pendulum/config/pendulum_cont_sampled_efficientzero_with_ppo_adv_config.py
+python zoo/classic_control/pendulum/config/pendulum_cont_sampled_efficientzero_with_ppo_adv_config.py
+python zoo/classic_control/pendulum/config/pendulum_robustZero_random_cl_config.py
+python zoo/classic_control/pendulum/config/pendulum_robustZero_config.py
