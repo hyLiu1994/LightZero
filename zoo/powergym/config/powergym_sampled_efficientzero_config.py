@@ -31,14 +31,14 @@ batch_size = 256
 max_env_step = int(5e8)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
-eval_freq = 50
+eval_freq = 1000
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
 powergym_sampled_efficientzero_config = dict(
     exp_name=
-f'data_sez_ctree_pytest/IEEE13_{env_id}_sampled_efficientZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+f'data_sez_ctree_IEEE13/IEEE13_{K}_{env_id}_sampled_efficientZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,

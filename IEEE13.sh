@@ -1,0 +1,6 @@
+python zoo/powergym/config/powergym_sampled_efficientzero_with_normal_config.py
+python zoo/powergym/config/powergym_sampled_efficientzero_with_random_adversary_config.py
+# python zoo/powergym/config/powergym_robustzero_random_cl_config.py
+python zoo/powergym/config/powergym_sampled_efficientzero_with_ppo_adversary_config.py
+# python zoo/powergym/config/powergym_robustzero_worst_cl_config.py
+python zoo/powergym/config/MainExperiment/powergym_IEEE13_robustzero_config.py

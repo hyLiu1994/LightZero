@@ -3,7 +3,7 @@ import zoo.powergym.env_manager.power_gym_subprocess_env_manager
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # options={'13Bus', '34Bus', '123Bus', '8500-Node'}
-env_id = '34Bus'
+env_id = '13Bus'
 
 if env_id == '13Bus':
     action_space_size = 6
@@ -28,17 +28,17 @@ update_per_collect = 200
 batch_size = 256
 
 
-max_env_step = int(5e8)
+max_env_step = int(2e5)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
-eval_freq = 50
+eval_freq = 100
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
 powergym_sampled_efficientzero_config = dict(
     exp_name=
-f'data_sez_ctree/IEEE13_{env_id}_Muzero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+f'data_sez_ctree_IEEE13/IEEE13_{K}_{env_id}_Muzero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -89,8 +89,8 @@ f'data_sez_ctree/IEEE13_{env_id}_Muzero_ns{num_simulations}_upc{update_per_colle
         action_shape=action_space_size,
         env_seed=seed,
         attack_method='advpolicy',
-        ppo_adv_config_path=f'/root/code/LightZero/ATLA_robust_RL/src/config_{env_id}_atla_ppo.json',
-        attack_advpolicy_network=f'/root/code/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-{env_id}-eps0.15-no-norm.model',
+        ppo_adv_config_path=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_{env_id}_atla_ppo.json',
+        attack_advpolicy_network=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-{env_id}-eps0.15-no-norm.model',
         Epsilon=0.15,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         # ------------------------------------------------------------------------------

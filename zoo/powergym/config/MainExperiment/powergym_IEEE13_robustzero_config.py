@@ -23,22 +23,22 @@ n_episode = 3
 collector_env_num = 3 # 不要变动,若要变动, 只能往小值变小.
 evaluator_env_num = 2
 continuous_action_space = True
-K = 20  # num_of_sampled_actions
+K = 50  # num_of_sampled_actions
 num_simulations = 50
 update_per_collect = 200
 batch_size = 128
 
-max_env_step = int(5e6)
+max_env_step = int(2e5)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
-eval_freq = 50
+eval_freq = 100
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
 powergym_robustzero_config = dict(
     exp_name=
-    f'data_sez_ctree/IEEE13_{env_id}_RobustZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+    f'data_sez_ctree_IEEE13/IEEE13_{K}_{env_id}_RobustZero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
