@@ -45,7 +45,7 @@ pendulum_sampled_efficientzero_config = dict(
             self_supervised_adversary_learning_loss=True,
         ),
         # ssl_adversary_loss_weight
-        c3=0.5,
+        c3=5e-3,
         # -------------------------
         cuda=True,
         env_type='not_board_games',

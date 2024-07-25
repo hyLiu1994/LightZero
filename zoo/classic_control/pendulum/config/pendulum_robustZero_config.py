@@ -45,7 +45,7 @@ pendulum_sampled_efficientzero_config = dict(
             self_supervised_adversary_learning_loss=True,
         ),
         # RobustZero hyperparamter ------
-        c3=0.5,
+        c3=5e-3,
         c4=1,
         robustzero_w1=1,
         optim_type='AdamAd',
