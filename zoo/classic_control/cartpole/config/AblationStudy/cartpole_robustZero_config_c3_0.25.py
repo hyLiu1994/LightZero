@@ -50,7 +50,7 @@ cartpole_sampled_efficientzero_config = dict(
         c4=1,
         robustzero_w1 = -1,
         optim_type='AdamAd',
-        robustzero_lambda=0.0001,  #  0.0015  5e-6    5e-5 0.015 0.001
+        robustzero_lambda= 5e-6,  #  0.0015  5e-6    5e-5 0.015 0.001
         # -------------------------------
         cuda=True,
         env_type='not_board_games',
