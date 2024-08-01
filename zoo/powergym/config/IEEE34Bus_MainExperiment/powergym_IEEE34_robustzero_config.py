@@ -27,7 +27,7 @@ continuous_action_space = True
 K = 100  # num_of_sampled_actions
 num_simulations = 250
 update_per_collect = 200
-batch_size = 128
+batch_size = 256
 
 max_env_step = int(2e5)
 reanalyze_ratio = 0.
