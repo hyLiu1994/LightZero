@@ -3,7 +3,7 @@ import zoo.powergym.env_manager.power_gym_subprocess_env_manager
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # options={'13Bus', '34Bus', '123Bus', '8500-Node'}
-env_id = '13Bus'
+env_id = '34Bus'
 
 if env_id == '13Bus':
     action_space_size = 6
@@ -13,6 +13,7 @@ elif env_id == '34Bus':
     observation_shape = 107
 
 ignore_done = False
+weight_decay = 5e-7
 
 # ==============================================================
 # begin of the most frequently changed config specified by the user
@@ -22,8 +23,8 @@ n_episode = 3
 collector_env_num = 3 # 不要变动,若要变动, 只能往小值变小.
 evaluator_env_num = 2
 continuous_action_space = True
-K = 50  # num_of_sampled_actions
-num_simulations = 125
+K = 100  # num_of_sampled_actions
+num_simulations = 250
 update_per_collect = 200
 batch_size = 256
 
@@ -38,7 +39,7 @@ eval_freq = 1000
 
 powergym_sampled_efficientzero_config = dict(
     exp_name=
-f'data_sez_ctree_IEEE13/IEEE13_{K}_{env_id}_MuZero_with_ppo_adversary_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+f'data_sez_ctree_IEEE34/IEEE34_{K}_{env_id}_MuZero_with_ppo_adversary_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}_wd{weight_decay}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -73,7 +74,7 @@ f'data_sez_ctree_IEEE13/IEEE13_{K}_{env_id}_MuZero_with_ppo_adversary_ns{num_sim
         lr_piecewise_constant_decay=False,
         learning_rate=0.003,
         grad_clip_value=0.5,  # 需要小点
-        weight_decay=5e-6,  # 0.01 不太行
+        weight_decay=weight_decay,  # 0.01 不太行
         num_simulations=num_simulations,
         reanalyze_ratio=reanalyze_ratio,
         n_episode=n_episode,

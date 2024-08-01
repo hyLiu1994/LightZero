@@ -13,6 +13,7 @@ elif env_id == '34Bus':
     observation_shape = 107
 
 ignore_done = False
+weight_decay = 5e-7
 
 # ==============================================================
 # begin of the most frequently changed config specified by the user
@@ -31,14 +32,14 @@ batch_size = 256
 max_env_step = int(2e5)
 reanalyze_ratio = 0.
 policy_entropy_loss_weight = 0.005
-eval_freq = 100
+eval_freq = 1000
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
 powergym_sampled_efficientzero_config = dict(
     exp_name=
-f'data_sez_ctree_IEEE13/IEEE13_{K}_{env_id}_Muzero_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
+f'data_sez_ctree_IEEE13/IEEE13_{K}_{env_id}_MuZero_with_random_adversary_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs-{batch_size}_pelw{policy_entropy_loss_weight}_seed{seed}',
     env=dict(
         env_id=env_id,
         action_clip=True,
@@ -81,7 +82,7 @@ f'data_sez_ctree_IEEE13/IEEE13_{K}_{env_id}_Muzero_ns{num_simulations}_upc{updat
         replay_buffer_size=int(1e6),
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
-        noise_policy = 'normal'
+        noise_policy = 'random'
     ),
     policy_adversary=dict(
         action_space='continuous',
@@ -90,13 +91,13 @@ f'data_sez_ctree_IEEE13/IEEE13_{K}_{env_id}_Muzero_ns{num_simulations}_upc{updat
         env_seed=seed,
         attack_method='advpolicy',
         ppo_adv_config_path=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_{env_id}_atla_ppo.json',
-        attack_advpolicy_network=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-{env_id}-eps0.15-no-norm.model',
-        Epsilon=0.15,
+        attack_advpolicy_network=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-{env_id}.model',
+        Epsilon=0.075,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         # ------------------------------------------------------------------------------
     ),
     policy_random_adversary=dict(
-        Epsilon=0.15,
+        Epsilon=0.075,
         noise_policy='random',
     ),
 

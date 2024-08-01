@@ -51,12 +51,14 @@ def eval_muzero_with_adversary(
     cfg = compile_config(cfg, seed=seed, env=None, auto=True, create_cfg=create_cfg, save_cfg=True)
     # Create main components: env, policy
     env_fn, collector_env_cfg, evaluator_env_cfg = get_vec_env_setting(cfg.env)
+    normal_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
+    [ne.__setattr__('env_type', 'normal_evaluator') for ne in normal_evaluator_env_cfg]
     ppo_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
     [pe.__setattr__('env_type', 'ppo_evaluator') for pe in ppo_evaluator_env_cfg]
     random_evaluator_env_cfg = deepcopy(evaluator_env_cfg)
     [re.__setattr__('env_type', 'random_evaluator') for re in random_evaluator_env_cfg]
 
-    evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in evaluator_env_cfg])
+    evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in normal_evaluator_env_cfg])
     evaluator_env.seed(cfg.seed, dynamic_seed=False)
     ppo_evaluator_env = create_env_manager(cfg.env.manager, [partial(env_fn, cfg=c) for c in ppo_evaluator_env_cfg])
     ppo_evaluator_env.seed(cfg.seed, dynamic_seed=False)
