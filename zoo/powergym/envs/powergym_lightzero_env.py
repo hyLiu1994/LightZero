@@ -209,9 +209,14 @@ class PowerGymEnvLZ(BaseEnv):
         return "LightZero Mujoco Env({})".format(self._cfg.env_id)
 
     def map_action(self, action): # [map_to_discrete(val) for val in test_values]
-        # 取出 ndarray 取出前面两个动作, 映射到0, 1 后面四个动作映射到0,32
-        two_action_list = [map_to_discrete(val, 2) for val in action[0:2]]
-        four_action_list = [map_to_discrete(val, 32) for val in action[2:]]
+        if self._env_id == '13Bus' or self._env_id == '34Bus':
+            # 取出 ndarray 取出前面两个动作, 映射到0, 1 后面四个动作映射到0,32
+            two_action_list = [map_to_discrete(val, 2) for val in action[0:2]]
+            four_action_list = [map_to_discrete(val, 32) for val in action[2:]]
+        elif self._env_id == '123Bus':
+            two_action_list = [map_to_discrete(val, 2) for val in action[0:4]]
+            four_action_list = [map_to_discrete(val, 32) for val in action[4:]]
+
         return two_action_list + four_action_list
 
 

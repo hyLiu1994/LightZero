@@ -3,7 +3,7 @@ import zoo.powergym.env_manager.power_gym_subprocess_env_manager
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # options={'13Bus', '34Bus', '123Bus', '8500-Node'}
-env_id = '13Bus'
+env_id = '123Bus'
 
 if env_id == '13Bus':
     action_space_size = 6
@@ -11,6 +11,11 @@ if env_id == '13Bus':
 elif env_id == '34Bus':
     action_space_size = 10
     observation_shape = 107
+
+elif env_id == '123Bus':
+    action_space_size = 15
+    observation_shape = 297
+
 
 ignore_done = False
 weight_decay = 5e-7
