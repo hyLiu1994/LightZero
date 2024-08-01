@@ -21,7 +21,7 @@ seed = 0
 
 pendulum_sampled_efficientzero_config = dict(
     exp_name=
-    f'data_sez_ctree_pendulum/pendulum_RobustZero_k{K}_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
+    f'data_sez_ctree_pendulum/pendulum_RobustZero_c4_0.5_k{K}_ns{num_simulations}_upc{update_per_collect}_rr{reanalyze_ratio}_bs_{batch_size}_seed_{seed}',
     env=dict(
         env_id='Pendulum-v1',
         continuous=True,
@@ -45,11 +45,11 @@ pendulum_sampled_efficientzero_config = dict(
             self_supervised_adversary_learning_loss=True,
         ),
         # RobustZero hyperparamter ------
-        c3=5e-3,
+        c3=0.5,
         c4=1,
-        robustzero_w1=1,
+        robustzero_w1=-1,
         optim_type='AdamAd',
-        robustzero_lambda=0.0001,  # 0.0015  5e-6    5e-5 0.015 0.001
+        robustzero_lambda=5e-6,  # 0.0015  5e-6    5e-5 0.015 0.001
         # -------------------------------
         cuda=True,
         env_type='not_board_games',
