@@ -107,6 +107,8 @@ class ObsNormWrapper(gym.ObservationWrapper):
         - clip_range (:obj:`Tuple[int, int]`): the range to clip the normalized observation.
         - rms (:obj:`RunningMeanStd`): running mean and standard deviation of the observations.
     """
+    shared_rms = None
+    shared_data_count = 0
 
     def __init__(self, env: gym.Env):
         """
@@ -116,9 +118,10 @@ class ObsNormWrapper(gym.ObservationWrapper):
             - env (:obj:`gym.Env`): the environment to wrap.
         """
         super().__init__(env)
-        self.data_count = 0
-        self.clip_range = (-3, 3)
-        self.rms = RunningMeanStd(shape=env.observation_space.shape)
+        self.clip_range = (-10, 10)
+        # self.rms = RunningMeanStd(shape=env.observation_space.shape)
+        if ObsNormWrapper.shared_rms is None:
+            ObsNormWrapper.shared_rms = RunningMeanStd(shape=env.observation_space.shape)
 
     def step(self, action: Union[int, np.ndarray]):
         """
@@ -133,9 +136,9 @@ class ObsNormWrapper(gym.ObservationWrapper):
             - done (:obj:`bool`): whether the episode has ended.
             - info (:obj:`Dict`): contains auxiliary diagnostic information.
         """
-        self.data_count += 1
+        ObsNormWrapper.shared_data_count += 1
         obs, rew, terminated, truncated, info = self.env.step(action)
-        self.rms.update(obs)
+        ObsNormWrapper.shared_rms.update(obs)
         return self.observation(obs), rew, terminated, truncated, info
 
     def observation(self, observation: np.ndarray) -> np.ndarray:
@@ -148,8 +151,9 @@ class ObsNormWrapper(gym.ObservationWrapper):
         Returns:
             - observation (:obj:`np.ndarray`): the normalized observation.
         """
-        if self.data_count > 30:
-            return np.clip((observation - self.rms.mean) / self.rms.std, self.clip_range[0], self.clip_range[1])
+        if ObsNormWrapper.shared_data_count > 30:
+            print('observation, ', (observation - ObsNormWrapper.shared_rms.mean) / ObsNormWrapper.shared_rms.std)
+            return np.clip((observation - ObsNormWrapper.shared_rms.mean) / ObsNormWrapper.shared_rms.std, self.clip_range[0], self.clip_range[1])
         else:
             return observation
 
@@ -164,6 +168,7 @@ class ObsNormWrapper(gym.ObservationWrapper):
         """
         # self.data_count = 0
         # self.rms.reset()
+        print(ObsNormWrapper.shared_data_count, ObsNormWrapper.shared_rms.mean, ObsNormWrapper.shared_rms.std)
         observation = self.env.reset(**kwargs)
         return (self.observation(observation[0]), observation[1])
 
