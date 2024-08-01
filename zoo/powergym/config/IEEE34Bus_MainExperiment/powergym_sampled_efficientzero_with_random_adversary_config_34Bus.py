@@ -92,12 +92,12 @@ f'data_sez_ctree_IEEE34/IEEE34_{K}_{env_id}_MuZero_with_random_adversary_ns{num_
         attack_method='advpolicy',
         ppo_adv_config_path=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/config_{env_id}_atla_ppo.json',
         attack_advpolicy_network=f'/root/autodl-tmp/LightZero/ATLA_robust_RL/src/models/atla_release/ATLA-PPO/attack-atla-ppo-{env_id}.model',
-        Epsilon=0.075,
+        Epsilon=0.15,
         noise_policy='ppo',  # 'atla_ppo' 'ppo'
         # ------------------------------------------------------------------------------
     ),
     policy_random_adversary=dict(
-        Epsilon=0.075,
+        Epsilon=0.15,
         noise_policy='random',
     ),
 
