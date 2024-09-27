@@ -25,3 +25,9 @@ pip install cython==0.29.21
 7. AttributeError: module 'mujoco_py' has no attribute ['utils'](https://github.com/openai/mujoco-py/issues/464)
 8. 安装mujoco_py遇到的一些[问题与解决方法](https://blog.csdn.net/weixin_44420419/article/details/116231500)
 9. [api_key ](https://www.roboti.us/license.html)
+
+# 随机性分析
+
+## MCTS
+1. c/c++ 版本的随机性使用随机种子控制不住, 但是python 版本的可以控制.
+2. collect env 以及 eval env 初始化的obs不同的

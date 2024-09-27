@@ -1,0 +1,1 @@
+nohup python -u /root/autodl-tmp/LightZero/zoo/classic_control/cartpole/config/Base/cartpole_efficientzero_config.py > test.out 2>&1 &
