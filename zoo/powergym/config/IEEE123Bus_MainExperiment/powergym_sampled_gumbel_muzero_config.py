@@ -11,7 +11,6 @@ if env_id == '13Bus':
 elif env_id == '34Bus':
     action_space_size = 10
     observation_shape = 107
-
 elif env_id == '123Bus':
     action_space_size = 15
     observation_shape = 297
@@ -39,7 +38,7 @@ latent_state_dim = 256
 # ==============================================================
 
 powergym_sampled_muzero_config = dict(
-    exp_name=f'data_smz/123Bus_sampled_muzero_k{K}_ns{num_simulations}_upc{update_per_collect}_rer{reanalyze_ratio}_norm-{norm_type}_seed_{seed}',
+    exp_name=f'data_smz/{env_id}_sampled_muzero_k{K}_ns{num_simulations}_upc{update_per_collect}_rer{reanalyze_ratio}_norm-{norm_type}_seed_{seed}',
     env=dict(
         env_id=env_id,
         continuous=True,
