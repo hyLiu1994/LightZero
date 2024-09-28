@@ -49,8 +49,8 @@ def train_muzero(
     """
 
     cfg, create_cfg = input_cfg
-    assert create_cfg.policy.type in ['efficientzero', 'muzero', 'sampled_efficientzero', 'gumbel_muzero', 'stochastic_muzero'], \
-        "train_muzero entry now only support the following algo.: 'efficientzero', 'muzero', 'sampled_efficientzero', 'gumbel_muzero', 'stochastic_muzero'"
+    assert create_cfg.policy.type in ['efficientzero', 'muzero', 'sampled_efficientzero', 'gumbel_muzero', 'sampled_gumbel_efficientzero', 'stochastic_muzero'], \
+        "train_muzero entry now only support the following algo.: 'efficientzero', 'muzero', 'sampled_efficientzero', 'gumbel_muzero', 'sampled_gumbel_muzero', 'stochastic_muzero'"
 
     if create_cfg.policy.type == 'muzero':
         from lzero.mcts import MuZeroGameBuffer as GameBuffer
@@ -62,6 +62,8 @@ def train_muzero(
         from lzero.mcts import GumbelMuZeroGameBuffer as GameBuffer
     elif create_cfg.policy.type == 'stochastic_muzero':
         from lzero.mcts import StochasticMuZeroGameBuffer as GameBuffer
+    elif create_cfg.policy.type == 'sampled_gumbel_efficientzero':
+        from lzero.mcts import SampledMuZeroGameBuffer as GameBuffer
 
     if cfg.policy.cuda and torch.cuda.is_available():
         cfg.policy.device = 'cuda'

@@ -4,3 +4,4 @@ from .game_buffer_sampled_efficientzero import SampledEfficientZeroGameBuffer
 from .game_buffer_gumbel_muzero import GumbelMuZeroGameBuffer
 from .game_buffer_stochastic_muzero import StochasticMuZeroGameBuffer
 from .adversary_game_buffer_sampled_efficientzero import AdversarySampledEfficientZeroGameBuffer
+from .game_buffer_sampled_muzero import SampledMuZeroGameBuffer

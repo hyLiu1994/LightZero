@@ -6,6 +6,7 @@ import torch
 from easydict import EasyDict
 
 from lzero.mcts.ctree.ctree_sampled_efficientzero import ezs_tree as tree_efficientzero
+from lzero.mcts.ctree.ctree_sampled_muzero import smz_tree as tree_sampled_muzero
 from lzero.policy import InverseScalarTransform, to_detach_cpu_numpy
 
 if TYPE_CHECKING:
@@ -238,7 +239,7 @@ class SampledEfficientZeroMCTSCtree(object):
 class SampledMuZeroMCTSCtree(object):
     """
     Overview:
-        The C++ implementation of MCTS (batch format) for Sampled EfficientZero.  \
+        The C++ implementation of MCTS (batch format) for Sampled MuZero.  \
         It completes the ``roots``and ``search`` methods by calling functions in module ``ctree_sampled_efficientzero``, \
         which are implemented in C++.
     Interfaces:
@@ -249,7 +250,7 @@ class SampledMuZeroMCTSCtree(object):
         it can be parallelized during model inference, thus saving time.
     """
 
-    # the default_config for SampledEfficientZeroMCTSCtree.
+    # the default_config for SampledMuZeroMCTSCtree.
     config = dict(
         # (float) The alpha value used in the Dirichlet distribution for exploration at the root node of the search tree.
         root_dirichlet_alpha=0.3,
@@ -299,7 +300,7 @@ class SampledMuZeroMCTSCtree(object):
     def roots(
             cls: int, root_num: int, legal_action_lis: List[Any], action_space_size: int, num_of_sampled_actions: int,
             continuous_action_space: bool
-    ) -> "ezs_ctree.Roots":
+    ) -> "smz_ctree.Roots":
         """
         Overview:
             Initializes a batch of roots to search parallelly later.
@@ -313,7 +314,7 @@ class SampledMuZeroMCTSCtree(object):
         ..note::
             The initialization is achieved by the ``Roots`` class from the ``ctree_sampled_efficientzero`` module.
         """
-        return tree_efficientzero.Roots(
+        return tree_sampled_muzero.Roots(
             root_num, legal_action_lis, action_space_size, num_of_sampled_actions, continuous_action_space
         )
 
@@ -329,7 +330,6 @@ class SampledMuZeroMCTSCtree(object):
             - roots (:obj:`Any`): a batch of expanded root nodes.
             - model (:obj:`torch.nn.Module`): The model used for inference.
             - latent_state_roots (:obj:`list`): the hidden states of the roots.
-            - reward_hidden_state_roots (:obj:`list`): the value prefix hidden states in LSTM of the roots.
             - to_play (:obj:`list`): the to_play list used in in self-play-mode board games.
 
         .. note::
@@ -345,18 +345,17 @@ class SampledMuZeroMCTSCtree(object):
 
             # the data storage of latent states: storing the latent state of all the nodes in one search.
             latent_state_batch_in_search_path = [latent_state_roots]
-            # the data storage of value prefix hidden states in LSTM
 
             # minimax value storage
-            min_max_stats_lst = tree_efficientzero.MinMaxStatsList(batch_size)
+            min_max_stats_lst = tree_sampled_muzero.MinMaxStatsList(batch_size)
             min_max_stats_lst.set_delta(self._cfg.value_delta_max)
 
             for simulation_index in range(self._cfg.num_simulations):
                 # In each simulation, we expanded a new node, so in one search, we have ``num_simulations`` num of nodes at most.
-
                 latent_states = []
+
                 # prepare a result wrapper to transport results between python and c++ parts
-                results = tree_efficientzero.ResultsWrapper(num=batch_size)
+                results = tree_sampled_muzero.ResultsWrapper(num=batch_size)
 
                 # latent_state_index_in_search_path: the first index of leaf node states in latent_state_batch_in_search_path, i.e. is current_latent_state_index in one the search.
                 # latent_state_index_in_batch: the second index of leaf node states in latent_state_batch_in_search_path, i.e. the index in the batch, whose maximum is ``batch_size``.
@@ -366,22 +365,28 @@ class SampledMuZeroMCTSCtree(object):
                 MCTS stage 1: Selection
                     Each simulation starts from the internal root state s0, and finishes when the simulation reaches a leaf node s_l.
                 """
-                latent_state_index_in_search_path, latent_state_index_in_batch, last_actions, virtual_to_play_batch = tree_efficientzero.batch_traverse(
-                    roots, pb_c_base, pb_c_init, discount_factor, min_max_stats_lst, results,
-                    copy.deepcopy(to_play_batch), self._cfg.model.continuous_action_space
-                )
+                if self._cfg.env_type == 'not_board_games':
+                    latent_state_index_in_search_path, latent_state_index_in_batch, last_actions, virtual_to_play_batch = tree_sampled_muzero.batch_traverse(
+                        roots, pb_c_base, pb_c_init, discount_factor, min_max_stats_lst, results,
+                        to_play_batch, self._cfg.model.continuous_action_space
+                    )
+                else:
+                    # the ``to_play_batch`` is only used in board games, here we need to deepcopy it to avoid changing the original data.
+                    latent_state_index_in_search_path, latent_state_index_in_batch, last_actions, virtual_to_play_batch = tree_sampled_muzero.batch_traverse(
+                        roots, pb_c_base, pb_c_init, discount_factor, min_max_stats_lst, results,
+                        copy.deepcopy(to_play_batch), self._cfg.model.continuous_action_space
+                    )
 
                 # obtain the search horizon for leaf nodes
                 search_lens = results.get_search_len()
                 # obtain the latent state for leaf node
                 for ix, iy in zip(latent_state_index_in_search_path, latent_state_index_in_batch):
                     latent_states.append(latent_state_batch_in_search_path[ix][iy])
-                latent_states = torch.from_numpy(np.asarray(latent_states)).to(device).float()
+                latent_states = torch.from_numpy(np.asarray(latent_states)).to(device)
 
                 if self._cfg.model.continuous_action_space is True:
                     # continuous action
-                    last_actions = torch.from_numpy(np.asarray(last_actions)).to(device).float()
-
+                    last_actions = torch.from_numpy(np.asarray(last_actions)).to(device)
                 else:
                     # discrete action
                     last_actions = torch.from_numpy(np.asarray(last_actions)).to(device).long()
@@ -392,7 +397,9 @@ class SampledMuZeroMCTSCtree(object):
                 MCTS stage 3: Backup
                     At the end of the simulation, the statistics along the trajectory are updated.
                 """
-                network_output = model.recurrent_inference(latent_states, last_actions)
+                network_output = model.recurrent_inference(
+                    latent_states, last_actions
+                )
 
                 [
                     network_output.latent_state, network_output.policy_logits, network_output.value,
@@ -405,15 +412,11 @@ class SampledMuZeroMCTSCtree(object):
                         self.inverse_scalar_transform_handle(network_output.reward),
                     ]
                 )
-
                 latent_state_batch_in_search_path.append(network_output.latent_state)
                 # tolist() is to be compatible with cpp datatype.
+                reward_pool = network_output.reward.reshape(-1).tolist()
                 value_pool = network_output.value.reshape(-1).tolist()
                 policy_logits_pool = network_output.policy_logits.tolist()
-                reward_latent_state_batch = network_output.reward.reshape(-1).tolist()
-
-                # reset the hidden states in LSTM every ``lstm_horizon_len`` steps in one search.
-                # which enable the model only need to predict the value prefix in a range (e.g.: [s0,...,s5]).
 
                 # In ``batch_backpropagate()``, we first expand the leaf node using ``the policy_logits`` and
                 # ``reward`` predicted by the model, then perform backpropagation along the search path to update the
@@ -421,8 +424,8 @@ class SampledMuZeroMCTSCtree(object):
 
                 # NOTE: simulation_index + 1 is very important, which is the depth of the current leaf node.
                 current_latent_state_index = simulation_index + 1
-                tree_efficientzero.batch_backpropagate(
-                    current_latent_state_index, discount_factor, value_prefix_pool, value_pool, policy_logits_pool,
-                    min_max_stats_lst, results, is_reset_list, virtual_to_play_batch
+                tree_sampled_muzero.batch_backpropagate(
+                    current_latent_state_index, discount_factor, reward_pool, value_pool, policy_logits_pool,
+                    min_max_stats_lst, results, virtual_to_play_batch
                 )
 
