@@ -246,6 +246,9 @@ def train_robustzero(
         replay_random_buffer.push_game_segments(new_random_data)
         replay_random_buffer.remove_oldest_data_to_fit()
         # Learn policy from collected data.
+        import time
+        start_time = time.perf_counter()
+
         for i in range(update_per_collect):
             # Learner will train ``update_per_collect`` times in one iteration.
             if replay_buffer.get_num_of_transitions() > batch_size:
@@ -276,6 +279,10 @@ def train_robustzero(
             if cfg.policy.use_priority: # 日志打印是否有问题
                 replay_buffer.update_priority(train_data, log_vars[0]['value_priority_orig'])
                 replay_random_buffer.update_priority(train_random_data, log_vars[0]['value_priority_orig'])
+
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed Time: {elapsed_time:.6f} seconds")
 
         if collector.envstep >= max_env_step or learner.train_iter >= max_train_iter:
             break

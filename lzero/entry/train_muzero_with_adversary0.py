@@ -273,6 +273,9 @@ def train_muzero_with_adversary(
 
         print("Begin Learn!")
         # Learn policy from collected data.
+        import time
+        start_time = time.perf_counter()
+
         for i in range(update_per_collect):
             # Learner will train ``update_per_collect`` times in one iteration.
             if replay_buffer.get_num_of_transitions() > batch_size:
@@ -291,6 +294,10 @@ def train_muzero_with_adversary(
 
             if cfg.policy.use_priority:
                 replay_buffer.update_priority(train_data, log_vars[0]['value_priority_orig'])
+
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed Time: {elapsed_time:.6f} seconds")
 
         if collector.envstep >= max_env_step or learner.train_iter >= max_train_iter:
             break

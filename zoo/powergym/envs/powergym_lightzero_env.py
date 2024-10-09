@@ -216,6 +216,9 @@ class PowerGymEnvLZ(BaseEnv):
         elif self._env_id == '123Bus':
             two_action_list = [map_to_discrete(val, 2) for val in action[0:4]]
             four_action_list = [map_to_discrete(val, 32) for val in action[4:]]
+        elif self._env_id == '8500Node':
+            two_action_list = [map_to_discrete(val, 2) for val in action[0:10]]
+            four_action_list = [map_to_discrete(val, 32) for val in action[10:]]
 
         return two_action_list + four_action_list
 
