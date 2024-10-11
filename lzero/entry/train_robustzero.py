@@ -272,7 +272,7 @@ def train_robustzero(
                     f'continue to collect now ....'
                 )
                 break
-
+            print(i)
             # The core train steps for MCTS+RL algorithms.
             log_vars = learner.train([train_data,train_random_data], collector.envstep)
 

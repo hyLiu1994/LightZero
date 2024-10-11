@@ -32,7 +32,7 @@ evaluator_env_num = 2
 continuous_action_space = True
 K = 50  # num_of_sampled_actions
 num_simulations = 125
-update_per_collect = 200
+update_per_collect = 100
 batch_size = 256
 
 max_env_step = int(2e5)

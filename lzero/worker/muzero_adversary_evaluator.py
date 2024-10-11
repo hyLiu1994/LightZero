@@ -290,6 +290,7 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                         for env_id in range(env_nums):
                             # Clamp using tanh.
                             noise = torch.nn.functional.hardtanh(perturbations_mean[env_id]) * self._epsilon
+                            noise = torch.clamp(noise, -1 * self._epsilon, self._epsilon)
                             game_segments[env_id].reset(
                                 [to_ndarray(init_obs[i]['observation'] + noise.cpu().tolist())
                                  for _ in range(self.policy_config.model.frame_stack_num)],
@@ -401,6 +402,7 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                             for idx, env_id in enumerate(timesteps.keys()):
                                 # Clamp using tanh.
                                 noise = torch.nn.functional.hardtanh(perturbations_mean[idx]) * self._epsilon
+                                noise = torch.clamp(noise, -1 * self._epsilon, self._epsilon)
                                 timesteps[env_id].obs['observation_true'] = timesteps[env_id].obs['observation']
                                 timesteps[env_id].obs['observation'] = timesteps[env_id].obs['observation'] + noise.detach().cpu()
                         elif self._noise_policy == 'random':
@@ -498,6 +500,7 @@ class MuZeroAdversaryEvaluator(ISerialEvaluator):
                                         perturbations_mean = self.pretrained_ppo_adversary.apply_ppo_attack(
                                             stacked_tensor)
                                         noise = torch.nn.functional.hardtanh(perturbations_mean[0]) * self._epsilon
+                                        noise = torch.clamp(noise, -1 * self._epsilon, self._epsilon)
                                         game_segments[env_id].reset(
                                             [to_ndarray(init_obs[i]['observation'] + noise.cpu().tolist())
                                              for _ in range(self.policy_config.model.frame_stack_num)],
