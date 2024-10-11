@@ -1,7 +1,15 @@
 from easydict import EasyDict
 import zoo.powergym.env_manager.power_gym_subprocess_env_manager
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+import sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+parent_dir = os.path.dirname(parent_dir)
+parent_dir = os.path.dirname(parent_dir)
+parent_dir = os.path.dirname(parent_dir)
+# parent_dir = os.path.dirname(parent_dir)
+print(parent_dir)
+sys.path.append(parent_dir)
 
 # options={'13Bus', '34Bus', '123Bus', '8500-Node'}
 env_id = '8500Node'
